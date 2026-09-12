@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="モンゴル旅程">
+<meta name="theme-color" content="#1C4E63">
+<title>モンゴル旅行 2026/9/19–25｜日別ルートマップ（叩き台）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"/>
+<style>
+:root{
+  --bg:#EEF0EA; --panel:#FFFFFF; --ink:#21201C; --ink-soft:#5B584E;
+  --sky:#1C4E63; --sky-soft:#3E7C99; --gold:#C9962B; --gold-soft:#E7D6A6;
+  --earth:#7A4B30; --alert:#B23A2E; --alert-bg:#F7E4E1; --line:#DBD7C9;
+  --ok-bg:#E7EFE6; --ok-ink:#3E5C3F;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; overscroll-behavior:none;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:'Zen Kaku Gothic New',sans-serif; font-size:15px; line-height:1.6;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
+.topbar{
+  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  padding-left:calc(16px + env(safe-area-inset-left));
+  padding-right:calc(16px + env(safe-area-inset-right));
+  border-bottom:1px solid var(--line); background:var(--panel);
+}
+.topbar h1{ font-size:17px; font-weight:700; margin:0; color:var(--sky); }
+.topbar .meta{ font-size:11px; color:var(--ink-soft); display:none; }
+.topbar .meta b{ color:var(--earth); }
+.app{ display:flex; flex-direction:column; height:calc(100vh - 50px); height:calc(100dvh - 50px); min-height:480px; }
+.rail{
+  width:100%; flex:0 0 auto; background:var(--sky); color:#fff;
+  display:flex; flex-direction:row; overflow-x:auto; -webkit-overflow-scrolling:touch;
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+  scrollbar-width:none;
+}
+.rail::-webkit-scrollbar{ display:none; }
+.rail button{
+  all:unset; cursor:pointer; padding:10px 14px; min-width:56px; min-height:48px; text-align:center;
+  border-bottom:3px solid transparent; display:flex; flex-direction:row;
+  align-items:center; justify-content:center; gap:6px; flex:0 0 auto; white-space:nowrap;
+}
+.rail button:active{ background:rgba(255,255,255,.18); }
+.rail button.active{ background:rgba(255,255,255,.12); border-bottom-color:var(--gold); color:var(--gold); }
+.rail .r-num{ font-family:'Shippori Mincho',serif; font-size:17px; font-weight:700; line-height:1; }
+.rail .r-sub{ font-size:10.5px; opacity:.85; }
+.rail .r-overview{ background:rgba(0,0,0,.15); font-weight:700; font-size:12px; padding:10px 16px; min-height:48px; min-width:auto; letter-spacing:.02em; }
+.rail .r-overview.active{ background:rgba(255,255,255,.12); border-bottom-color:var(--gold); color:var(--gold); }
+
+.main{ flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; }
+.headerband{ padding:12px 16px 10px; padding-left:calc(16px + env(safe-area-inset-left)); padding-right:calc(16px + env(safe-area-inset-right)); border-bottom:1px solid var(--line); background:var(--panel); }
+.headerband h2{ margin:0 0 4px; font-size:16px; line-height:1.4; color:var(--sky); }
+.headerband .highlight{ color:var(--ink-soft); font-size:12.5px; max-width:820px; }
+.stat-strip{ display:flex; gap:7px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; margin:9px -16px 0; padding:0 16px 2px; scrollbar-width:none; }
+.stat-strip::-webkit-scrollbar{ display:none; }
+.chip{
+  border:1px solid var(--line); background:var(--bg); padding:5px 10px; font-size:11.5px;
+  display:flex; align-items:center; gap:5px; white-space:nowrap; border-radius:3px; flex:0 0 auto;
+}
+.chip .num{ font-weight:700; font-variant-numeric:tabular-nums; color:var(--sky); }
+.chip.level-楽 .num{ color:var(--ok-ink); }
+.chip.level-中 .num{ color:var(--gold); }
+.chip.level-ハード .num{ color:var(--alert); }
+.chip.alert{ background:var(--alert-bg); border-color:#E3B7B0; color:var(--alert); }
+.chip.alert .num{ color:var(--alert); }
+.chip.note{ background:none; border-style:dashed; color:var(--ink-soft); }
+
+.content{ flex:1; display:flex; min-height:0; flex-direction:column; }
+.mapwrap{ flex:0 0 38vh; flex:0 0 38dvh; position:relative; border-right:none; border-bottom:1px solid var(--line); }
+#map{ position:absolute; inset:0; background:#dfe6e2; }
+.timeline{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--panel);
+  padding:6px 0 calc(30px + env(safe-area-inset-bottom));
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+
+.stop{ padding:13px 18px 11px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+.stop:active{ background:#FAFAF6; }
+.stop.hi{ background:#FBF6E9; }
+.stop-head{ display:flex; align-items:center; gap:10px; }
+.badge{
+  flex:0 0 28px; width:28px; height:28px; border-radius:50%; background:var(--sky); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
+  border:2px solid var(--sky);
+}
+.badge.prec-推定{ background:var(--gold-soft); color:var(--earth); border:2px dashed var(--earth); }
+.badge.prec-未定{ background:#fff; color:var(--alert); border:2px dashed var(--alert); }
+.stop-name{ font-weight:700; font-size:15px; }
+.stop-name .tag{ font-weight:400; font-size:10.5px; color:var(--ink-soft); margin-left:6px; }
+.leg-info{ margin:4px 0 0 38px; font-size:11.5px; color:var(--ink-soft); }
+.leg-info.est::after{ content:"（概算）"; color:var(--gold); }
+.items{ margin:9px 0 0 38px; display:flex; flex-direction:column; gap:9px; }
+.item{ border-left:3px solid var(--line); padding:2px 0 2px 10px; }
+.item.t-flight{ border-color:#8E6FB0; }
+.item.t-meal{ border-color:#5C9A63; }
+.item.t-city{ border-color:var(--sky-soft); }
+.item.t-field{ border-color:var(--gold); }
+.item.t-rest{ border-color:#B9B6A9; }
+.item.t-todo{ border-color:var(--alert); background:var(--alert-bg); }
+.item .time{ font-variant-numeric:tabular-nums; font-weight:700; font-size:12.5px; color:var(--sky); }
+.item .act{ font-weight:700; font-size:14px; margin-left:6px; }
+.item .memo{ font-size:12.5px; color:var(--ink-soft); margin-top:3px; }
+.item .status{ font-size:10.5px; padding:1px 6px; border:1px solid var(--line); margin-left:6px; color:var(--ink-soft); }
+.item.t-todo .status{ border-color:var(--alert); color:var(--alert); }
+
+.pin{
+  width:26px; height:26px; border-radius:50%; background:var(--sky); color:#fff; border:2px solid #fff;
+  box-shadow:0 0 0 1.5px var(--sky); display:flex; align-items:center; justify-content:center;
+  font-family:'Zen Kaku Gothic New',sans-serif; font-weight:700; font-size:12px;
+}
+.pin.prec-推定{ background:var(--gold-soft); color:var(--earth); box-shadow:0 0 0 1.5px var(--earth); }
+.pin.prec-未定{ background:#fff; color:var(--alert); box-shadow:0 0 0 1.5px var(--alert); }
+.route-label{ background:var(--panel); border:1px solid var(--line); padding:1px 6px; font-size:10.5px; color:var(--ink-soft); border-radius:2px; }
+
+.ov-legend{ position:absolute; right:8px; top:8px; background:rgba(255,255,255,.94); border:1px solid var(--line); padding:8px 10px; font-size:11px; max-width:150px; z-index:500; max-height:calc(100% - 16px); overflow-y:auto; }
+.ov-legend div{ display:flex; align-items:center; gap:5px; padding:3px 0; cursor:pointer; }
+.ov-legend .sw{ width:12px; height:4px; flex:0 0 12px; }
+
+.wx-panel{
+  position:absolute; left:8px; top:8px; z-index:500; background:rgba(255,255,255,.95);
+  border:1px solid var(--line); padding:8px 11px; font-size:11px; min-width:120px; max-width:170px;
+}
+.wx-row{ display:flex; align-items:center; gap:7px; }
+.wx-temp{ font-weight:700; font-variant-numeric:tabular-nums; font-size:15px; color:var(--ink); white-space:nowrap; }
+.wx-label{ color:var(--ink-soft); font-size:10px; margin-top:3px; line-height:1.4; }
+.wx-loading{ color:var(--ink-soft); font-size:10.5px; }
+.wx-icon-clear,.wx-icon-mclear{ color:var(--gold); }
+.wx-icon-cloudy,.wx-icon-fog{ color:var(--ink-soft); }
+.wx-icon-rain{ color:var(--sky-soft); }
+.wx-icon-snow{ color:#6FA8C9; }
+.wx-icon-storm{ color:#8E6FB0; }
+
+.footnote{ display:none; }
+
+/* ---- iPad・PC など広い画面ではデスクトップ2カラムに切り替え ---- */
+@media (min-width: 880px){
+  .topbar{ padding:14px 20px; }
+  .topbar h1{ font-size:19px; }
+  .topbar .meta{ display:block; font-size:12px; }
+  .app{ flex-direction:row; height:calc(100vh - 54px); }
+  .rail{ width:104px; flex:0 0 104px; flex-direction:column; overflow-x:visible; overflow-y:auto; }
+  .rail button{ flex-direction:column; padding:12px 8px; min-height:0; border-bottom:1px solid rgba(255,255,255,.14); border-left:none; }
+  .rail button.active{ background:var(--gold); color:var(--sky); border-bottom-color:transparent; }
+  .rail .r-overview{ padding:16px 8px; }
+  .rail .r-overview.active{ background:var(--gold); color:var(--sky); }
+  .headerband{ padding:16px 22px 14px; }
+  .headerband h2{ font-size:22px; }
+  .headerband .highlight{ font-size:13.5px; }
+  .stat-strip{ margin:12px 0 0; padding:0; overflow-x:visible; gap:10px; }
+  .chip{ padding:6px 12px; font-size:12.5px; }
+  .content{ flex-direction:row; }
+  .mapwrap{ flex:1 1 56%; border-right:1px solid var(--line); border-bottom:none; }
+  .timeline{ flex:1 1 44%; padding:6px 0 40px; }
+  .footnote{ display:block; padding:10px 20px 20px; font-size:11px; color:var(--ink-soft); border-top:1px solid var(--line); background:var(--panel); }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>モンゴル旅行 2026/9/19–25</h1>
+  <div class="meta">日別ルート叩き台　／　データ元：<b>mongolia_schedule_2026_v3_geodata.xlsx</b>　／　距離・所要時間はページを開いた時点でオンライン経路計算（<a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a>）により算出。天気は<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>より取得（当日から約15日先まで予報、それより先はまだ取得不可、過去日は提供期間外の場合あり）。通信状況により概算・取得不可表示に切り替わります。</div>
+</div>
+
+<div class="app">
+  <div class="rail" id="rail"></div>
+  <div class="main">
+    <div class="headerband">
+      <h2 id="dayTitle">—</h2>
+      <div class="highlight" id="dayHighlight"></div>
+      <div class="stat-strip" id="statStrip"></div>
+    </div>
+    <div class="content">
+      <div class="mapwrap"><div id="map"></div></div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+    <div class="footnote">
+      座標精度：<b>確定</b>＝施設単位で特定／<b>推定</b>＝地域名までしか分からず代表点を使用（点線の輪郭）／<b>未定</b>＝場所自体が未手配（赤の点線）。
+      移動時間・距離は徒歩・車の区間はOSRMの実経路、乗馬・ラクダ・空路や通信失敗時は直線距離からの概算です。あくまで計画段階の目安としてご利用ください。
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+<script>
+/* ============ 0. データ ============ */
+const TRIP = [{"date": "2026/9/19", "dow": "土", "title": "Day1：出発・移動日（釜山乗継）", "highlight": "釜山乗継の弾丸移動日。景色より移動の効率を優先する日。", "stops": [{"order": 1, "lat": 33.3212, "lon": 130.9414, "precision": "推定", "name": "自宅（日田）", "arrive_move": "-", "items": [{"start": "12:00", "end": "13:00", "act": "荷物最終チェック・出発", "place": "自宅", "book": "-", "move": "-", "memo": "往路の受託手荷物は15kg/人と厳しめ。防寒着はかさばるので機内持込に一部逃がす", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 33.585, "lon": 130.4491, "precision": "確定", "name": "福岡空港", "arrive_move": "電車/車", "items": [{"start": "13:00", "end": "13:50", "act": "移動", "place": "自宅→福岡空港", "book": "-", "move": "電車/車", "memo": "経路により所要変動。実家に立ち寄る予定がある場合は前日入りも検討", "status": "案", "type": "rest"}, {"start": "13:50", "end": "16:55", "act": "空港到着・国際線チェックイン", "place": "福岡空港 国際線ターミナル", "book": "不要", "move": "-", "memo": "3時間前推奨。イースター航空カウンター。釜山までの区間のみのチェックイン", "status": "確定", "type": "rest"}]}, {"order": 3, "lat": 35.1729, "lon": 128.9472, "precision": "確定", "name": "金海国際空港（釜山）", "arrive_move": "飛行機", "items": [{"start": "16:55", "end": "18:05", "act": "フライト ZE944", "place": "福岡空港→金海国際空港", "book": "済", "move": "飛行機", "memo": "イースター航空　PNR：（非公開）　受託15kg/人", "status": "確定", "type": "flight"}, {"start": "18:05", "end": "21:35", "act": "乗継（3時間30分）★荷物受取・再チェックイン", "place": "金海国際空港", "book": "要確認", "move": "徒歩", "memo": "★スルーバゲージ対象外。一度荷物を受け取り、チェジュ航空カウンターで再度預ける必要あり", "status": "要手配", "type": "todo"}]}, {"order": 4, "lat": 47.6514, "lon": 106.8216, "precision": "確定", "name": "チンギスハーン国際空港（UB）", "arrive_move": "飛行機", "items": [{"start": "21:35", "end": "00:35+1", "act": "フライト 7C5257", "place": "金海国際空港→チンギスハーン国際空港", "book": "済", "move": "飛行機", "memo": "チェジュ航空　PNR：（非公開）　受託15kg/人", "status": "確定", "type": "flight"}]}], "weather": {"lat": 47.6514, "lon": 106.8216, "place": "チンギスハーン国際空港（UB）"}}, {"date": "2026/9/20", "dow": "日", "title": "Day2：深夜到着＋ウランバートル市内（唯一の自由行動日）", "highlight": "唯一の自由行動日。仏教寺院・広場・博物館を巡り、モンゴルの空気に慣れる日。", "stops": [{"order": 1, "lat": 47.6514, "lon": 106.8216, "precision": "確定", "name": "チンギスハーン国際空港（UB）", "arrive_move": "-", "items": [{"start": "00:35", "end": "01:30", "act": "入国審査・荷物受取・両替", "place": "チンギスハーン国際空港", "book": "不要", "move": "-", "memo": "空港1F・2Fに24時間営業の両替所あり", "status": "確定", "type": "rest"}]}, {"order": 2, "lat": 47.9124, "lon": 106.9139, "precision": "確定", "name": "Bayangol Hotel", "arrive_move": "送迎車/タクシー", "items": [{"start": "01:30", "end": "02:30", "act": "空港→ホテル移動", "place": "空港→Bayangol Hotel", "book": "★要手配", "move": "送迎車/タクシー", "memo": "深夜のため事前送迎手配を推奨（予約番号：（非公開）／TEL：（非公開））", "status": "要手配", "type": "todo"}, {"start": "02:30", "end": "10:00", "act": "チェックイン・就寝", "place": "Bayangol Hotel（Chinggis Ave 5）", "book": "済", "move": "-", "memo": "深夜着になる旨を必ず事前連絡。無断不泊は全額キャンセル料扱いなので要注意", "status": "要手配", "type": "todo"}, {"start": "10:00", "end": "11:00", "act": "起床・準備", "place": "Bayangol Hotel", "book": "-", "move": "-", "memo": "朝食が部屋料金に含まれるか予約特典に記載なし（フィットネス・駐車場・WiFiのみ記載）。要確認", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 47.9231, "lon": 106.895, "precision": "確定", "name": "ガンダン寺", "arrive_move": "タクシー", "items": [{"start": "11:00", "end": "11:20", "act": "移動", "place": "ホテル→ガンダン寺", "book": "不要", "move": "タクシー", "memo": "約6km", "status": "案", "type": "rest"}, {"start": "11:20", "end": "12:30", "act": "ガンダン寺 見学", "place": "ガンダン・テクチェンリン寺院", "book": "不要", "move": "徒歩", "memo": "9:00〜17:00。祈りを捧げる地元の人の姿が一番の見どころ", "status": "案", "type": "city"}]}, {"order": 4, "lat": 47.916, "lon": 106.906, "precision": "確定", "name": "Khaan Buuz（食堂）", "arrive_move": "徒歩/タクシー", "items": [{"start": "12:30", "end": "13:00", "act": "移動", "place": "ガンダン寺→国営百貨店周辺", "book": "不要", "move": "徒歩/タクシー", "memo": "約2km", "status": "案", "type": "rest"}, {"start": "13:00", "end": "14:00", "act": "昼食（ローカル食堂）", "place": "Khaan Buuz（国営百貨店向かい）", "book": "不要", "move": "徒歩", "memo": "ボーズとホーショールを指差しで注文可。1,200MNT〜", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 47.9226, "lon": 106.9149, "precision": "確定", "name": "チンギスハーン国立博物館", "arrive_move": "徒歩", "items": [{"start": "14:00", "end": "14:20", "act": "移動", "place": "→チンギスハーン国立博物館", "book": "不要", "move": "徒歩", "memo": "スフバートル広場の北西側", "status": "案", "type": "rest"}, {"start": "14:20", "end": "16:30", "act": "チンギスハーン国立博物館", "place": "チンギスハーン国立博物館", "book": "任意", "move": "徒歩", "memo": "2022年開館・9階建て。9:00〜20:00。入場3万MNT＋最上階2万MNT", "status": "案", "type": "city"}]}, {"order": 6, "lat": 47.919, "lon": 106.9175, "precision": "確定", "name": "スフバートル広場", "arrive_move": "徒歩", "items": [{"start": "16:30", "end": "17:00", "act": "スフバートル広場 散策", "place": "チンギスハーン広場", "book": "不要", "move": "徒歩", "memo": "博物館のすぐ南", "status": "案", "type": "city"}]}, {"order": 7, "lat": 47.9168, "lon": 106.9064, "precision": "確定", "name": "国営百貨店", "arrive_move": "徒歩", "items": [{"start": "17:00", "end": "17:45", "act": "お土産の下見", "place": "国営百貨店（State Department Store）", "book": "不要", "move": "徒歩", "memo": "9:00〜22:00。6Fが土産・カシミヤ", "status": "案", "type": "city"}]}, {"order": 8, "lat": 47.9109, "lon": 106.92, "precision": "確定", "name": "Tumen Ekh Ensemble", "arrive_move": "タクシー", "items": [{"start": "18:00", "end": "19:10", "act": "民族音楽・舞踊ショー", "place": "Tumen Ekh Ensemble", "book": "当日券", "move": "タクシー", "memo": "毎日18:00開演・約60分。60,000MNT前後", "status": "案", "type": "city"}]}, {"order": 9, "lat": 47.8841, "lon": 106.9154, "precision": "確定", "name": "ザイサン記念碑", "arrive_move": "タクシー", "items": [{"start": "17:00", "end": "18:30", "act": "【代替案】ザイサン・トルゴイの丘", "place": "ザイサン記念碑", "book": "不要", "move": "タクシー", "memo": "224段の階段の上から市街を一望", "status": "案", "type": "city"}]}, {"order": 10, "lat": 47.9258, "lon": 106.916, "precision": "確定", "name": "Modern Nomads", "arrive_move": "徒歩/タクシー", "items": [{"start": "19:30", "end": "21:00", "act": "夕食", "place": "Modern Nomads 2号店 など", "book": "不要", "move": "徒歩/タクシー", "memo": "英語メニューあり", "status": "案", "type": "meal"}]}, {"order": 11, "lat": 47.9124, "lon": 106.9139, "precision": "確定", "name": "Bayangol Hotel", "arrive_move": "タクシー", "items": [{"start": "21:30", "end": "", "act": "帰宿・就寝", "place": "Bayangol Hotel", "book": "-", "move": "タクシー", "memo": "翌朝9:00にツアー出発", "status": "案", "type": "rest"}]}], "weather": {"lat": 47.9124, "lon": 106.9139, "place": "Bayangol Hotel"}}, {"date": "2026/9/21", "dow": "月", "title": "Day3：ツアー1日目　テレルジ国立公園（草原デビュー）", "highlight": "草原デビュー。亀石・遊牧民ゲル・乗馬・星空観察という「初めての景色」が集中する1日。", "stops": [{"order": 1, "lat": 47.9124, "lon": 106.9139, "precision": "確定", "name": "Bayangol Hotel", "arrive_move": "-", "items": [{"start": "07:30", "end": "08:30", "act": "朝食", "place": "Bayangol Hotel", "book": "要確認", "move": "-", "memo": "朝食が予約に含まれるか未確認。含まれない場合はロビー階のレストランか、外で軽く済ませる想定", "status": "要確認", "type": "todo"}, {"start": "08:30", "end": "09:00", "act": "チェックアウト・荷造り", "place": "Bayangol Hotel", "book": "-", "move": "-", "memo": "全荷物を持って移動。以降3泊はゲル", "status": "確定", "type": "rest"}, {"start": "09:00", "end": "09:15", "act": "ガイド・ドライバーと合流", "place": "Bayangol Hotel ロビー", "book": "済", "move": "-", "memo": "日本語ガイド（氏名は非公開）TEL：（非公開）", "status": "確定", "type": "rest"}]}, {"order": 2, "lat": 47.9077, "lon": 107.4227, "precision": "確定", "name": "亀石（テレルジ）", "arrive_move": "専用車", "items": [{"start": "09:15", "end": "11:00", "act": "テレルジ国立公園へ移動", "place": "UB市内→テレルジ", "book": "済", "move": "専用車", "memo": "約60〜70km・約1.5時間", "status": "確定", "type": "rest"}, {"start": "11:00", "end": "12:00", "act": "亀石（タートルロック）見学", "place": "テレルジ国立公園", "book": "済", "move": "徒歩", "memo": "高さ約15mの巨岩", "status": "確定", "type": "field"}]}, {"order": 3, "lat": 47.905, "lon": 107.41, "precision": "推定", "name": "ゲルキャンプ（テレルジ）", "arrive_move": "専用車", "items": [{"start": "12:00", "end": "13:00", "act": "遊牧民ゲル訪問・交流", "place": "テレルジ周辺の遊牧民ゲル", "book": "済", "move": "専用車", "memo": "スーテーツァイを勧められる。ゲルの敷居は踏まない", "status": "確定", "type": "field"}, {"start": "13:00", "end": "14:00", "act": "昼食（遊牧民のゲルにて）", "place": "同上", "book": "済", "move": "-", "memo": "この旅で最もローカルな食事のひとつ", "status": "確定", "type": "meal"}]}, {"order": 4, "lat": 47.9355, "lon": 107.4275, "precision": "確定", "name": "アリヤバラ寺院", "arrive_move": "徒歩", "items": [{"start": "14:00", "end": "15:30", "act": "アリヤバラ寺院へハイキング", "place": "アリヤバラ寺院", "book": "済", "move": "徒歩", "memo": "吊り橋と階段を登る。標高1,600m前後", "status": "確定", "type": "field"}]}, {"order": 5, "lat": 47.9077, "lon": 107.4227, "precision": "確定", "name": "亀石（テレルジ）", "arrive_move": "馬", "items": [{"start": "15:30", "end": "17:00", "act": "乗馬・ハイキング", "place": "テレルジ周辺", "book": "済", "move": "馬", "memo": "初心者は引き馬", "status": "確定", "type": "field"}]}, {"order": 6, "lat": 47.905, "lon": 107.41, "precision": "推定", "name": "ゲルキャンプ（テレルジ）", "arrive_move": "専用車", "items": [{"start": "17:00", "end": "18:00", "act": "ゲルキャンプ チェックイン", "place": "ツーリストキャンプ（テレルジ）", "book": "済", "move": "専用車", "memo": "シャワー・トイレは別棟の共同施設", "status": "確定", "type": "rest"}, {"start": "18:30", "end": "20:00", "act": "夕食", "place": "ゲルキャンプ内レストラン", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}, {"start": "20:00", "end": "21:30", "act": "星空観察", "place": "キャンプ周辺", "book": "済", "move": "徒歩", "memo": "9月下旬の夜は0℃前後。フル防寒必須", "status": "確定", "type": "field"}, {"start": "21:30", "end": "", "act": "就寝", "place": "ゲルキャンプ", "book": "-", "move": "-", "memo": "薪ストーブは夜中に消える", "status": "確定", "type": "rest"}]}], "weather": {"lat": 47.905, "lon": 107.41, "place": "ゲルキャンプ（テレルジ）"}}, {"date": "2026/9/22", "dow": "火", "title": "Day4：チンギスハーン騎馬像・カザフ民族　→　ブルドへ長距離移動", "highlight": "40mのチンギスハーン騎馬像と、鷹狩りで有名なカザフ民族の文化に触れる日。後半は5時間の長距離移動。", "stops": [{"order": 1, "lat": 47.905, "lon": 107.41, "precision": "推定", "name": "ゲルキャンプ（テレルジ）", "arrive_move": "-", "items": [{"start": "08:00", "end": "09:00", "act": "朝食", "place": "ゲルキャンプ", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}]}, {"order": 2, "lat": 47.9077, "lon": 107.4227, "precision": "確定", "name": "亀石（テレルジ）", "arrive_move": "徒歩", "items": [{"start": "09:00", "end": "10:30", "act": "自由時間", "place": "テレルジ周辺", "book": "済", "move": "徒歩", "memo": "朝の草原を散歩", "status": "確定", "type": "field"}]}, {"order": 3, "lat": 47.8082, "lon": 107.5298, "precision": "確定", "name": "チンギスハーン騎馬像", "arrive_move": "専用車", "items": [{"start": "10:30", "end": "11:30", "act": "チンギスハーン騎馬像へ移動", "place": "テレルジ→ツォンジンボルドグ", "book": "済", "move": "専用車", "memo": "約50km", "status": "確定", "type": "rest"}, {"start": "11:30", "end": "13:00", "act": "チンギスハーン騎馬像テーマパーク", "place": "チンギスハーン騎馬像", "book": "済", "move": "徒歩", "memo": "高さ40m。馬の頭部が展望台", "status": "確定", "type": "field"}]}, {"order": 4, "lat": 47.7709, "lon": 107.2548, "precision": "推定", "name": "ナライハ区", "arrive_move": "専用車", "items": [{"start": "13:00", "end": "14:30", "act": "カザフ民族のゲル訪問・昼食", "place": "ナライハ区", "book": "済", "move": "専用車", "memo": "バヤンウルギー県出身のカザフ民族。鷹狩り文化で有名", "status": "確定", "type": "meal"}, {"start": "14:30", "end": "15:30", "act": "モスク見学", "place": "ナライハ区のモスク", "book": "済", "move": "徒歩", "memo": "露出を控えた服装で", "status": "確定", "type": "field"}]}, {"order": 5, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "専用車", "items": [{"start": "16:00", "end": "21:00", "act": "ブルドへ長距離移動", "place": "ナライハ→ブルド地方", "book": "済", "move": "専用車", "memo": "★約5時間の移動。酔い止め・軽食・モバイルバッテリー準備", "status": "確定", "type": "rest"}, {"start": "21:00", "end": "22:00", "act": "チェックイン・夕食", "place": "ツーリストキャンプ（ブルド）", "book": "済", "move": "-", "memo": "到着が遅いため夕食は簡素になる可能性", "status": "確定", "type": "meal"}, {"start": "22:00", "end": "", "act": "就寝", "place": "ツーリストキャンプ", "book": "-", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 47.3313, "lon": 103.6895, "place": "ブルド地方（推定）"}}, {"date": "2026/9/23", "dow": "水", "title": "Day5：カラコルム遺跡＋草原の乗馬・ラクダ（遊牧民ゲル泊）", "highlight": "モンゴル帝国の古都カラコルムへ。午後は草原の乗馬とラクダ、夜は遊牧民の家庭に泊まる、この旅で最も特殊な一晩。", "stops": [{"order": 1, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "-", "items": [{"start": "08:00", "end": "09:00", "act": "朝食", "place": "ツーリストキャンプ", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}]}, {"order": 2, "lat": 47.1964, "lon": 102.8236, "precision": "確定", "name": "ハルホリン", "arrive_move": "専用車", "items": [{"start": "09:00", "end": "10:00", "act": "カラコルムへ移動", "place": "ブルド→ハルホリン", "book": "済", "move": "専用車", "memo": "約1時間", "status": "確定", "type": "rest"}]}, {"order": 3, "lat": 47.2012, "lon": 102.841, "precision": "確定", "name": "エルデネ・ゾー寺院", "arrive_move": "徒歩", "items": [{"start": "10:00", "end": "12:00", "act": "エルデネ・ゾー寺院 見学", "place": "エルデネ・ゾー寺院", "book": "済", "move": "徒歩", "memo": "1586年創建。108基の仏塔", "status": "確定", "type": "field"}, {"start": "12:00", "end": "12:30", "act": "亀石（亀趺）見学", "place": "カラコルム遺跡", "book": "済", "move": "徒歩", "memo": "花崗岩製", "status": "確定", "type": "field"}]}, {"order": 4, "lat": 47.1964, "lon": 102.8236, "precision": "確定", "name": "ハルホリン", "arrive_move": "-", "items": [{"start": "12:30", "end": "13:30", "act": "昼食", "place": "ハルホリン周辺", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}]}, {"order": 5, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "専用車", "items": [{"start": "13:30", "end": "14:30", "act": "ブルドへ戻る", "place": "ハルホリン→ブルド", "book": "済", "move": "専用車", "memo": "", "status": "確定", "type": "rest"}, {"start": "14:30", "end": "16:00", "act": "遊牧民との乗馬体験", "place": "ブルドの大草原", "book": "済", "move": "馬", "memo": "テレルジより開けた地形での外乗", "status": "確定", "type": "field"}, {"start": "16:00", "end": "17:30", "act": "ラクダ乗り体験", "place": "近隣の砂丘", "book": "済", "move": "ラクダ", "memo": "フタコブラクダ。草原と砂丘の地形の落差が面白い", "status": "確定", "type": "field"}, {"start": "17:30", "end": "19:00", "act": "遊牧民の生活体験", "place": "ブルドの遊牧民ゲル", "book": "済", "move": "-", "memo": "乳搾り・餌やりなど。実際の遊牧民宅に泊まる特殊な一夜", "status": "確定", "type": "field"}, {"start": "19:00", "end": "20:30", "act": "夕食（遊牧民の家庭料理）", "place": "同上", "book": "済", "move": "-", "memo": "観光用にアレンジされていない味", "status": "確定", "type": "meal"}, {"start": "20:30", "end": "21:30", "act": "星空・夜の草原", "place": "ゲル周辺", "book": "済", "move": "徒歩", "memo": "★トイレ・シャワーは基本的に無い前提で", "status": "確定", "type": "field"}, {"start": "21:30", "end": "", "act": "就寝", "place": "遊牧民のゲル", "book": "-", "move": "-", "memo": "最も冷える夜になる可能性", "status": "確定", "type": "rest"}]}], "weather": {"lat": 47.3313, "lon": 103.6895, "place": "ブルド地方（推定）"}}, {"date": "2026/9/24", "dow": "木", "title": "Day6：ホスタイ国立保護区（野生馬タヒ）→ ウランバートル帰還・ツアー終了", "highlight": "世界最後の野生馬タヒに会いに。ツアーは昼食後に解散し、ウランバートルでの最後の夜へ。", "stops": [{"order": 1, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "-", "items": [{"start": "07:30", "end": "08:30", "act": "朝食", "place": "遊牧民のゲル", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}, {"start": "08:30", "end": "09:00", "act": "出発準備・お別れ", "place": "ブルド", "book": "済", "move": "-", "memo": "現金の心付けの要否をガイドに確認", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 47.74, "lon": 106.19, "precision": "推定", "name": "ホスタイ国立公園", "arrive_move": "専用車", "items": [{"start": "09:00", "end": "11:30", "act": "ホスタイ国立保護区へ移動", "place": "ブルド→ホスタイ", "book": "済", "move": "専用車", "memo": "", "status": "確定", "type": "rest"}, {"start": "11:30", "end": "13:30", "act": "ホスタイ国立保護区観光", "place": "ホスタイ国立公園", "book": "済", "move": "専用車/徒歩", "memo": "野生馬タヒ。見られない可能性あり", "status": "確定", "type": "field"}, {"start": "13:30", "end": "14:30", "act": "昼食", "place": "保護区周辺", "book": "済", "move": "-", "memo": "ツアーに含まれる最後の食事", "status": "確定", "type": "meal"}]}, {"order": 3, "lat": 47.9188, "lon": 106.9227, "precision": "確定", "name": "Ulaanbaatar Hotel", "arrive_move": "専用車", "items": [{"start": "14:30", "end": "16:30", "act": "ウランバートルへ移動・ツアー終了", "place": "ホスタイ→UB市内ホテル", "book": "済", "move": "専用車", "memo": "約100km", "status": "確定", "type": "rest"}, {"start": "16:30", "end": "17:30", "act": "ホテル チェックイン", "place": "Ulaanbaatar Hotel", "book": "済", "move": "-", "memo": "確定済み（Trip.com確認番号・PINは非公開）。スーペリアツインルーム。キャンセル無料は9/23 23:59まで", "status": "確定", "type": "rest"}]}, {"order": 4, "lat": 47.9168, "lon": 106.9064, "precision": "確定", "name": "国営百貨店", "arrive_move": "徒歩/タクシー", "items": [{"start": "17:30", "end": "19:00", "act": "シャワー・休憩・お土産購入", "place": "国営百貨店 など", "book": "不要", "move": "徒歩/タクシー", "memo": "まずシャワー。6Fでカシミヤ・土産をまとめ買い", "status": "案", "type": "city"}]}, {"order": 5, "lat": 47.9188, "lon": 106.9227, "precision": "推定", "name": "夕食のお店（未定・ホテル周辺）", "arrive_move": "徒歩/タクシー", "items": [{"start": "19:00", "end": "21:00", "act": "最後の夕食", "place": "モンゴル料理 or 韓国料理", "book": "任意", "move": "徒歩/タクシー", "memo": "羊が続いた反動で別ジャンルも現実的", "status": "案", "type": "meal"}]}, {"order": 6, "lat": 47.9188, "lon": 106.9227, "precision": "確定", "name": "Ulaanbaatar Hotel", "arrive_move": "-", "items": [{"start": "21:00", "end": "", "act": "帰宿・パッキング", "place": "Ulaanbaatar Hotel", "book": "-", "move": "-", "memo": "トゥグルクの残額を確認", "status": "案", "type": "rest"}]}], "weather": {"lat": 47.9188, "lon": 106.9227, "place": "Ulaanbaatar Hotel"}}, {"date": "2026/9/25", "dow": "金", "title": "Day7：帰国", "highlight": "ソウル経由で帰国。", "stops": [{"order": 1, "lat": 47.9188, "lon": 106.9227, "precision": "確定", "name": "Ulaanbaatar Hotel", "arrive_move": "-", "items": [{"start": "07:00", "end": "08:00", "act": "朝食・最終チェック", "place": "Ulaanbaatar Hotel", "book": "済", "move": "-", "memo": "朝食は予約に含まれる（2名分・確定済み）。受託荷物23kg×1個/人も確認", "status": "確定", "type": "meal"}, {"start": "08:30", "end": "09:00", "act": "チェックアウト", "place": "Ulaanbaatar Hotel", "book": "-", "move": "-", "memo": "チェックアウトは12:00まででOKなので、8:30出発は余裕あり", "status": "確定", "type": "rest"}]}, {"order": 2, "lat": 47.6514, "lon": 106.8216, "precision": "確定", "name": "チンギスハーン国際空港（UB）", "arrive_move": "タクシー/送迎", "items": [{"start": "09:00", "end": "10:00", "act": "空港へ移動", "place": "UB市内→チンギスハーン国際空港", "book": "★要手配", "move": "タクシー/送迎", "memo": "約50km・約60分", "status": "要手配", "type": "todo"}, {"start": "10:00", "end": "13:00", "act": "チェックイン・出国手続き", "place": "チンギスハーン国際空港", "book": "不要", "move": "-", "memo": "3時間前推奨", "status": "確定", "type": "rest"}]}, {"order": 3, "lat": 37.4689, "lon": 126.4334, "precision": "確定", "name": "仁川国際空港 T2", "arrive_move": "飛行機", "items": [{"start": "13:00", "end": "17:10", "act": "フライト KE2042", "place": "チンギスハーン国際空港→仁川国際空港T2", "book": "済", "move": "飛行機", "memo": "大韓航空　PNR：（非公開）　受託23kg×1個/人", "status": "確定", "type": "flight"}, {"start": "17:10", "end": "18:35", "act": "乗継（1時間25分）", "place": "仁川国際空港T2", "book": "-", "move": "徒歩", "memo": "同一T2内・荷物はスルー", "status": "確定", "type": "rest"}]}, {"order": 4, "lat": 33.585, "lon": 130.4491, "precision": "確定", "name": "福岡空港", "arrive_move": "飛行機", "items": [{"start": "18:35", "end": "20:00", "act": "フライト KE781", "place": "仁川国際空港T2→福岡空港", "book": "済", "move": "飛行機", "memo": "大韓航空　PNR：（非公開）", "status": "確定", "type": "flight"}, {"start": "20:00", "end": "21:00", "act": "帰国・入国手続き", "place": "福岡空港", "book": "-", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}, {"order": 5, "lat": 33.3212, "lon": 130.9414, "precision": "推定", "name": "自宅（日田）", "arrive_move": "電車/車", "items": [{"start": "21:00", "end": "", "act": "帰宅", "place": "福岡空港→自宅", "book": "-", "move": "電車/車", "memo": "最終電車の時刻を事前確認", "status": "案", "type": "rest"}]}], "weather": {"lat": 33.3212, "lon": 130.9414, "place": "自宅（日田）"}}];
+
+const DAY_COLORS = ['#1C4E63','#C9962B','#7A4B30','#3E7C99','#4E7A52','#8E5B3D','#6C5B8E'];
+
+/* ============ 1. コアロジック（core_logic.js と同一） ============ */
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function classifyMove(moveText) {
+  const t = (moveText || "").trim();
+  if (!t || t === "-") return "none";
+  if (t.includes("飛行機")) return "flight";
+  if (t.includes("馬") && !t.includes("車")) return "horse";
+  if (t.includes("ラクダ")) return "camel";
+  if (t.includes("徒歩") && !t.includes("車") && !t.includes("タクシー")) return "foot";
+  if (t.includes("車") || t.includes("タクシー") || t.includes("送迎") || t.includes("バス")) return "driving";
+  return "unknown";
+}
+const TYPICAL_SPEED_KMH = { horse: 6, camel: 5 };
+function estimateNonRoutable(kind, straightKm) {
+  const distKm = straightKm * 1.15;
+  const speed = TYPICAL_SPEED_KMH[kind] || 5;
+  return { distanceKm: distKm, durationMin: (distKm / speed) * 60, source: "estimate" };
+}
+function fallbackRoute(kind, lat1, lon1, lat2, lon2) {
+  const straight = haversineKm(lat1, lon1, lat2, lon2);
+  if (kind === "foot") {
+    const distKm = straight * 1.25;
+    return { distanceKm: distKm, durationMin: (distKm / 4.5) * 60, source: "estimate" };
+  }
+  if (kind === "driving") {
+    const speedKmh = straight > 100 ? 55 : 35;
+    const distKm = straight * 1.35;
+    return { distanceKm: distKm, durationMin: (distKm / speedKmh) * 60, source: "estimate" };
+  }
+  return estimateNonRoutable(kind, straight);
+}
+function summarizeDay(legs) {
+  let walkKm = 0, walkMin = 0, driveMin = 0, flightCount = 0, otherMin = 0, anyEstimate = false;
+  for (const leg of legs) {
+    if (leg.source === "estimate") anyEstimate = true;
+    if (leg.kind === "foot") { walkKm += leg.distanceKm; walkMin += leg.durationMin; }
+    else if (leg.kind === "driving") { driveMin += leg.durationMin; }
+    else if (leg.kind === "flight") { flightCount += 1; }
+    else if (leg.kind === "horse" || leg.kind === "camel") { otherMin += leg.durationMin; }
+  }
+  const driveHours = driveMin / 60;
+  let level = "楽";
+  if (walkKm >= 5 || driveHours >= 4) level = "ハード";
+  else if (walkKm >= 2 || driveHours >= 2) level = "中";
+  return {
+    walkKm: Math.round(walkKm * 10) / 10, walkMin: Math.round(walkMin),
+    driveHours: Math.round(driveHours * 10) / 10, flightCount,
+    otherMin: Math.round(otherMin), level, hasEstimate: anyEstimate,
+  };
+}
+
+/* ============ 1.5 天気（Open-Meteo、キー不要） ============ */
+const WX_LABEL = { clear:"快晴", mclear:"晴れ", cloudy:"くもり", fog:"霧", rain:"雨", snow:"雪", storm:"雷雨" };
+const WX_ICON = {
+  clear: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4.2"/><g stroke-linecap="round"><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.1" y1="5.1" x2="6.8" y2="6.8"/><line x1="17.2" y1="17.2" x2="18.9" y2="18.9"/><line x1="5.1" y1="18.9" x2="6.8" y2="17.2"/><line x1="17.2" y1="6.8" x2="18.9" y2="5.1"/></g></svg>`,
+  cloudy: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 18h10a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.6 1.6A3.5 3.5 0 0 0 7 18Z"/></svg>`,
+  fog: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 14h10a4 4 0 0 0 .3-8 5.5 5.5 0 0 0-10.4 1.8A3.5 3.5 0 0 0 7 14Z"/><line x1="4" y1="18" x2="20" y2="18" stroke-linecap="round"/><line x1="6" y1="21" x2="18" y2="21" stroke-linecap="round"/></svg>`,
+  rain: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 13h10a4 4 0 0 0 .3-8 5.5 5.5 0 0 0-10.4 1.8A3.5 3.5 0 0 0 7 13Z"/><g stroke-linecap="round"><line x1="8" y1="17" x2="7" y2="20"/><line x1="12" y1="17" x2="11" y2="20"/><line x1="16" y1="17" x2="15" y2="20"/></g></svg>`,
+  snow: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 13h10a4 4 0 0 0 .3-8 5.5 5.5 0 0 0-10.4 1.8A3.5 3.5 0 0 0 7 13Z"/><g stroke-linecap="round"><line x1="8" y1="17" x2="8" y2="21"/><line x1="6.2" y1="19" x2="9.8" y2="19"/><line x1="16" y1="17" x2="16" y2="21"/><line x1="14.2" y1="19" x2="17.8" y2="19"/></g></svg>`,
+  storm: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 12h10a4 4 0 0 0 .3-8 5.5 5.5 0 0 0-10.4 1.8A3.5 3.5 0 0 0 7 12Z"/><path d="M12 13l-2.4 4.2h2.6L10.8 21l3.8-5h-2.4L13.6 13Z" stroke-linejoin="round" fill="currentColor" stroke="none"/></svg>`,
+};
+function wxCategory(code) {
+  if (code === 0) return "clear";
+  if (code === 1 || code === 2) return "mclear";
+  if (code === 3) return "cloudy";
+  if (code === 45 || code === 48) return "fog";
+  if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return "rain";
+  if ([71,73,75,77,85,86].includes(code)) return "snow";
+  if ([95,96,99].includes(code)) return "storm";
+  return "cloudy";
+}
+function pad2(n) { return String(n).padStart(2, "0"); }
+function ymd(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function parseDayDate(str) {
+  const [y, m, d] = str.split('/').map(Number);
+  return new Date(y, m - 1, d);
+}
+function toDateOnly(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+const WX_FORECAST_MAX_DAYS = 15; // Open-Meteoの日次予報が安定して取れる目安の日数
+const weatherCache = new Map();
+
+async function callOpenMeteo(base, lat, lon, dateStr) {
+  const url = `${base}?latitude=${lat}&longitude=${lon}&start_date=${dateStr}&end_date=${dateStr}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error("bad status " + res.status);
+    const data = await res.json();
+    const tmax = data?.daily?.temperature_2m_max?.[0];
+    const tmin = data?.daily?.temperature_2m_min?.[0];
+    const code = data?.daily?.weathercode?.[0];
+    if (tmax == null || tmin == null || code == null) return { status: "unavailable" };
+    return { status: "ok", tmax, tmin, code };
+  } catch (e) {
+    clearTimeout(t);
+    return { status: "error" };
+  }
+}
+
+async function fetchWeather(day) {
+  if (!day.weather) return { status: "unavailable" };
+  const target = parseDayDate(day.date);
+  const today = toDateOnly(new Date());
+  const diffDays = Math.round((target - today) / 86400000);
+  const dateStr = ymd(target);
+  const cacheKey = `${dateStr}:${day.weather.lat},${day.weather.lon}`;
+  if (weatherCache.has(cacheKey)) return weatherCache.get(cacheKey);
+
+  let result;
+  if (diffDays > WX_FORECAST_MAX_DAYS) {
+    result = { status: "too_future", availableInDays: diffDays - WX_FORECAST_MAX_DAYS };
+  } else if (diffDays >= 0) {
+    result = await callOpenMeteo("https://api.open-meteo.com/v1/forecast", day.weather.lat, day.weather.lon, dateStr);
+  } else {
+    result = await callOpenMeteo("https://archive-api.open-meteo.com/v1/archive", day.weather.lat, day.weather.lon, dateStr);
+  }
+  weatherCache.set(cacheKey, result);
+  return result;
+}
+
+function ensureWxPanel() {
+  let panel = document.getElementById('wxPanel');
+  if (panel) return panel;
+  panel = document.createElement('div');
+  panel.className = "wx-panel"; panel.id = "wxPanel";
+  document.getElementById('map').appendChild(panel);
+  return panel;
+}
+function removeWxPanel() {
+  const panel = document.getElementById('wxPanel');
+  if (panel) panel.remove();
+}
+function removeOvLegend() {
+  const legend = document.getElementById('ovLegend');
+  if (legend) legend.remove();
+}
+
+async function renderWeather(day) {
+  if (!day.weather) { removeWxPanel(); return; }
+  const panel = ensureWxPanel();
+  panel.innerHTML = `<div class="wx-loading">${escapeHtml(day.weather.place)}の天気を確認中…</div>`;
+  const wx = await fetchWeather(day);
+  if (wx.status === "ok") {
+    const cat = wxCategory(wx.code);
+    panel.innerHTML = `
+      <div class="wx-row">
+        <span class="wx-icon-${cat}">${WX_ICON[cat === "mclear" ? "clear" : cat]}</span>
+        <span class="wx-temp">${Math.round(wx.tmax)}° / ${Math.round(wx.tmin)}°</span>
+      </div>
+      <div class="wx-label">${WX_LABEL[cat]}・${escapeHtml(day.weather.place)}</div>`;
+  } else if (wx.status === "too_future") {
+    panel.innerHTML = `<div class="wx-label">天気予報はまだ取得できません<br>（${escapeHtml(day.weather.place)}／あと${wx.availableInDays}日ほどで取得可能に）</div>`;
+  } else if (wx.status === "unavailable") {
+    panel.innerHTML = `<div class="wx-label">この日の天気データは提供期間外です<br>（${escapeHtml(day.weather.place)}）</div>`;
+  } else {
+    panel.innerHTML = `<div class="wx-label">天気を取得できませんでした<br>（${escapeHtml(day.weather.place)}）</div>`;
+  }
+}
+
+/* ============ 2. OSRM フェッチ（キャッシュ付き） ============ */
+const routeCache = new Map();
+async function fetchRoute(profile, lat1, lon1, lat2, lon2) {
+  const key = `${profile}:${lat1.toFixed(5)},${lon1.toFixed(5)}:${lat2.toFixed(5)},${lon2.toFixed(5)}`;
+  if (routeCache.has(key)) return routeCache.get(key);
+  const url = `https://router.project-osrm.org/route/v1/${profile}/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error("bad status " + res.status);
+    const data = await res.json();
+    if (!data.routes || !data.routes.length) throw new Error("no route");
+    const route = data.routes[0];
+    const result = {
+      distanceKm: route.distance / 1000,
+      durationMin: route.duration / 60,
+      coords: route.geometry.coordinates.map(([lon, lat]) => [lat, lon]),
+      source: "osrm",
+    };
+    routeCache.set(key, result);
+    return result;
+  } catch (e) {
+    const fb = fallbackRoute(profile === "foot" ? "foot" : "driving", lat1, lon1, lat2, lon2);
+    fb.coords = [[lat1, lon1], [lat2, lon2]];
+    routeCache.set(key, fb);
+    return fb;
+  }
+}
+
+/* ============ 3. MapLibre GL 初期化（OpenFreeMap、APIキー不要） ============ */
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
+  center: [135.0, 35.0], // [lng, lat] の順（Leafletと逆なので注意）
+  zoom: 4,
+});
+map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+
+let mapMarkers = [];
+let mapLineIds = [];
+let lineIdSeq = 0;
+
+function clearMap() {
+  mapMarkers.forEach(m => m.remove());
+  mapMarkers = [];
+  mapLineIds.forEach(id => {
+    if (map.getLayer(id)) map.removeLayer(id);
+    if (map.getSource(id)) map.removeSource(id);
+  });
+  mapLineIds = [];
+}
+
+function pinEl(number, precision) {
+  const cls = precision === "推定" ? "prec-推定" : (precision === "未定" ? "prec-未定" : "");
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<div class="pin ${cls}">${number}</div>`;
+  return wrap.firstElementChild;
+}
+function dayChipEl(dayNum, color) {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<div class="pin" style="background:${color};box-shadow:0 0 0 1.5px ${color};">D${dayNum}</div>`;
+  return wrap.firstElementChild;
+}
+function addMarker(lat, lon, el, popupHtml, onClick) {
+  const marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(map);
+  if (popupHtml) marker.setPopup(new maplibregl.Popup({ offset: 16 }).setHTML(popupHtml));
+  if (onClick) el.addEventListener('click', onClick);
+  mapMarkers.push(marker);
+  return marker;
+}
+function addLabelMarker(lat, lon, text) {
+  const el = document.createElement('div');
+  el.className = "route-label";
+  el.textContent = text;
+  const marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(map);
+  mapMarkers.push(marker);
+  return marker;
+}
+function addLine(coordsLatLon, style) {
+  const id = 'line-' + (lineIdSeq++);
+  const geojson = {
+    type: 'Feature', properties: {},
+    geometry: { type: 'LineString', coordinates: coordsLatLon.map(([lat, lon]) => [lon, lat]) }
+  };
+  map.addSource(id, { type: 'geojson', data: geojson });
+  const paint = { 'line-color': style.color, 'line-width': style.weight, 'line-opacity': style.opacity };
+  if (style.dashArray) paint['line-dasharray'] = style.dashArray;
+  map.addLayer({ id, type: 'line', source: id, layout: { 'line-cap': 'round' }, paint });
+  mapLineIds.push(id);
+  return id;
+}
+function removeLine(id) {
+  if (map.getLayer(id)) map.removeLayer(id);
+  if (map.getSource(id)) map.removeSource(id);
+  mapLineIds = mapLineIds.filter(x => x !== id);
+}
+function fitBoundsLatLon(pointsLatLon, opts) {
+  if (!pointsLatLon.length) return;
+  const bounds = new maplibregl.LngLatBounds();
+  pointsLatLon.forEach(([lat, lon]) => bounds.extend([lon, lat]));
+  map.fitBounds(bounds, opts);
+}
+function styleForKind(kind) {
+  if (kind === "foot") return { color: "#C9962B", weight: 4, dashArray: null, opacity: .9 };
+  if (kind === "driving") return { color: "#1C4E63", weight: 4, dashArray: null, opacity: .85 };
+  if (kind === "flight") return { color: "#8E6FB0", weight: 3, dashArray: [2, 2], opacity: .85 };
+  if (kind === "horse" || kind === "camel") return { color: "#7A4B30", weight: 3, dashArray: [1, 1.5], opacity: .85 };
+  return { color: "#999", weight: 2, dashArray: [1.5, 1.5], opacity: .6 };
+}
+function fmtDist(km) { return km >= 10 ? `${km.toFixed(0)}km` : `${km.toFixed(1)}km`; }
+function fmtMin(min) {
+  if (min >= 60) { const h = Math.floor(min / 60), m = Math.round(min % 60); return m ? `${h}時間${m}分` : `${h}時間`; }
+  return `${Math.round(min)}分`;
+}
+function kindLabel(kind) {
+  return { foot: "徒歩", driving: "車", flight: "空路", horse: "乗馬", camel: "ラクダ", none: "", unknown: "移動" }[kind] || kind;
+}
+
+/* ============ 4. 1日分の描画 ============ */
+let activeDayIndex = -1; // -1 = 全体ルート
+
+function renderStatStrip(container, summary, todoCount) {
+  container.innerHTML = "";
+  const chips = [];
+  chips.push(`<div class="chip"><span>徒歩</span><span class="num">${summary.walkKm}km / ${fmtMin(summary.walkMin)}</span></div>`);
+  chips.push(`<div class="chip"><span>車移動</span><span class="num">${summary.driveHours}時間</span></div>`);
+  if (summary.flightCount) chips.push(`<div class="chip"><span>フライト</span><span class="num">${summary.flightCount}区間</span></div>`);
+  if (summary.otherMin) chips.push(`<div class="chip"><span>乗馬・ラクダ等</span><span class="num">${fmtMin(summary.otherMin)}</span></div>`);
+  chips.push(`<div class="chip level-${summary.level}"><span>体感負荷</span><span class="num">${summary.level}</span></div>`);
+  if (todoCount > 0) chips.push(`<div class="chip alert"><span>要対応</span><span class="num">${todoCount}件</span></div>`);
+  if (summary.hasEstimate) chips.push(`<div class="chip note">一部区間は概算値</div>`);
+  container.innerHTML = chips.join("");
+}
+
+async function renderDay(dayIndex) {
+  activeDayIndex = dayIndex;
+  updateRailActive();
+  clearMap();
+  removeOvLegend();
+  const day = TRIP[dayIndex];
+  document.getElementById('dayTitle').textContent = `${day.date}（${day.dow}）　${day.title}`;
+  document.getElementById('dayHighlight').textContent = day.highlight || "";
+
+  const stops = day.stops;
+  const boundsPts = [];
+  stops.forEach((s, i) => {
+    const el = pinEl(i + 1, s.precision);
+    addMarker(s.lat, s.lon, el, `<b>${i + 1}. ${escapeHtml(s.name)}</b>`, () => scrollToStop(i));
+    boundsPts.push([s.lat, s.lon]);
+  });
+  if (boundsPts.length) fitBoundsLatLon(boundsPts, { padding: 40, maxZoom: 13, duration: 0 });
+
+  // 経路：まず直線プレースホルダーを描画
+  const legLines = [];
+  for (let i = 1; i < stops.length; i++) {
+    const a = stops[i - 1], b = stops[i];
+    const kind = classifyMove(b.arrive_move);
+    const style = styleForKind(kind);
+    const lineId = addLine([[a.lat, a.lon], [b.lat, b.lon]], { ...style, dashArray: [1, 1.5] });
+    legLines.push({ kind, lineId, a, b, resolved: null });
+  }
+
+  renderTimeline(day, stops, legLines.map(x => null));
+  renderStatStrip(document.getElementById('statStrip'), summarizeDay([]), countTodo(stops));
+  document.getElementById('statStrip').insertAdjacentHTML('beforeend', '<div class="chip note">計算中…</div>');
+  renderWeather(day);
+
+  // 実経路 / 概算を非同期で取得して差し替え
+  const results = [];
+  for (const leg of legLines) {
+    let res;
+    if (leg.kind === "foot") res = await fetchRoute("foot", leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
+    else if (leg.kind === "driving") res = await fetchRoute("driving", leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
+    else if (leg.kind === "horse" || leg.kind === "camel") {
+      const straight = haversineKm(leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
+      res = estimateNonRoutable(leg.kind, straight);
+      res.coords = [[leg.a.lat, leg.a.lon], [leg.b.lat, leg.b.lon]];
+    } else if (leg.kind === "flight") {
+      const straight = haversineKm(leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
+      res = { distanceKm: straight, durationMin: 0, coords: [[leg.a.lat, leg.a.lon], [leg.b.lat, leg.b.lon]], source: "flight" };
+    } else {
+      res = { distanceKm: 0, durationMin: 0, coords: [[leg.a.lat, leg.a.lon], [leg.b.lat, leg.b.lon]], source: "none" };
+    }
+    leg.resolved = res;
+    results.push({ kind: leg.kind, ...res });
+
+    // 見た目を実経路に更新
+    removeLine(leg.lineId);
+    const style = styleForKind(leg.kind);
+    leg.lineId = addLine(res.coords, style);
+    let label = "";
+    if (leg.kind === "foot" || leg.kind === "driving") label = `${kindLabel(leg.kind)} ${fmtDist(res.distanceKm)}・${fmtMin(res.durationMin)}${res.source === "estimate" ? "（概算）" : ""}`;
+    else if (leg.kind === "horse" || leg.kind === "camel") label = `${kindLabel(leg.kind)} 約${fmtMin(res.durationMin)}（概算）`;
+    else if (leg.kind === "flight") label = `空路 約${fmtDist(res.distanceKm)}`;
+    if (label) {
+      const midIdx = Math.floor(res.coords.length / 2);
+      const [mlat, mlon] = res.coords[midIdx];
+      addLabelMarker(mlat, mlon, label);
+    }
+
+    // タイムラインの区間表示を随時更新
+    updateLegInfoInTimeline(legLines.indexOf(leg) + 1, res, leg.kind);
+  }
+
+  renderStatStrip(document.getElementById('statStrip'), summarizeDay(results), countTodo(stops));
+}
+
+function countTodo(stops) {
+  let n = 0;
+  stops.forEach(s => s.items.forEach(it => { if (it.type === "todo") n++; }));
+  return n;
+}
+
+function renderTimeline(day, stops, legResults) {
+  const el = document.getElementById('timeline');
+  el.innerHTML = "";
+  stops.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = "stop"; div.id = `stop-${i}`;
+    const legHtml = i === 0 ? "" : `<div class="leg-info" id="leg-${i}">前の地点から：計算中…</div>`;
+    const itemsHtml = s.items.map(it => `
+      <div class="item t-${it.type}">
+        <span class="time">${it.start}${it.end ? "–" + it.end : ""}</span>
+        <span class="act">${escapeHtml(it.act)}</span>
+        <span class="status">${escapeHtml(it.status)}</span>
+        ${it.memo ? `<div class="memo">${escapeHtml(it.memo)}</div>` : ""}
+      </div>`).join("");
+    div.innerHTML = `
+      <div class="stop-head">
+        <div class="badge prec-${s.precision}">${i + 1}</div>
+        <div class="stop-name">${escapeHtml(s.name)}<span class="tag">${s.precision}</span></div>
+      </div>
+      ${legHtml}
+      <div class="items">${itemsHtml}</div>`;
+    div.addEventListener('click', () => {
+      map.flyTo({ center: [s.lon, s.lat], zoom: Math.max(map.getZoom(), 12), duration: 600 });
+    });
+    el.appendChild(div);
+  });
+}
+
+function updateLegInfoInTimeline(stopIndex, res, kind) {
+  const elm = document.getElementById(`leg-${stopIndex}`);
+  if (!elm) return;
+  let text = "";
+  if (kind === "foot" || kind === "driving") {
+    text = `前の地点から：${kindLabel(kind)} ${fmtDist(res.distanceKm)}・約${fmtMin(res.durationMin)}`;
+  } else if (kind === "horse" || kind === "camel") {
+    text = `前の地点から：${kindLabel(kind)}で約${fmtMin(res.durationMin)}`;
+  } else if (kind === "flight") {
+    text = `前の地点から：空路 約${fmtDist(res.distanceKm)}`;
+  } else {
+    text = `前の地点から：移動なし／同じ場所`;
+  }
+  elm.textContent = text;
+  if (res.source === "estimate") elm.classList.add("est");
+}
+
+function scrollToStop(i) {
+  const elm = document.getElementById(`stop-${i}`);
+  if (elm) { elm.scrollIntoView({ behavior: "smooth", block: "center" }); elm.classList.add('hi'); setTimeout(() => elm.classList.remove('hi'), 1200); }
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ============ 5. 全体ルート ============ */
+function renderOverview() {
+  activeDayIndex = -1;
+  updateRailActive();
+  clearMap();
+  removeWxPanel();
+  document.getElementById('dayTitle').textContent = "全体ルート（2026/9/19〜9/25）";
+  document.getElementById('dayHighlight').textContent = "各日をクリックすると詳細（歩行時間・地図・活動量）を確認できます。ここでは直線で大まかな位置関係のみ示しています。";
+  document.getElementById('statStrip').innerHTML = "";
+
+  const boundsPts = [];
+  let legendHtml = "";
+  TRIP.forEach((day, di) => {
+    const color = DAY_COLORS[di % DAY_COLORS.length];
+    const pts = day.stops.map(s => [s.lat, s.lon]);
+    if (pts.length > 1) {
+      addLine(pts, { color, weight: 3, opacity: .85, dashArray: null });
+    }
+    pts.forEach(p => boundsPts.push(p));
+    if (pts.length) {
+      const el = dayChipEl(di + 1, color);
+      addMarker(pts[0][0], pts[0][1], el, `<b>Day${di + 1}：${escapeHtml(day.title.replace(/^Day\d+：/, ""))}</b>`, () => renderDay(di));
+    }
+    legendHtml += `<div data-day="${di}"><span class="sw" style="background:${color}"></span>Day${di + 1}：${(day.highlight || day.title).slice(0, 20)}…</div>`;
+  });
+  if (boundsPts.length) fitBoundsLatLon(boundsPts, { padding: 30, duration: 0 });
+
+  removeOvLegend();
+  const legend = document.createElement('div');
+  legend.className = "ov-legend"; legend.id = "ovLegend";
+  legend.innerHTML = legendHtml;
+  document.getElementById('map').appendChild(legend);
+  legend.querySelectorAll('div[data-day]').forEach(elm => {
+    elm.addEventListener('click', () => renderDay(parseInt(elm.dataset.day, 10)));
+  });
+
+  document.getElementById('timeline').innerHTML = `
+    <div style="padding:16px 20px;color:var(--ink-soft);font-size:12.5px;">
+      全体ルートは移動の密度感をつかむための簡易表示です（直線でつないでいます）。
+      各日の実際の徒歩・車の経路や所要時間は、左のレールからDayを選ぶと表示されます。
+    </div>`;
+}
+
+/* ============ 6. レール ============ */
+function buildRail() {
+  const rail = document.getElementById('rail');
+  const ov = document.createElement('button');
+  ov.className = "r-overview"; ov.textContent = "全体ルート";
+  ov.addEventListener('click', renderOverview);
+  rail.appendChild(ov);
+  TRIP.forEach((day, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<div class="r-num">${i + 1}</div><div class="r-sub">${day.dow}曜</div>`;
+    b.addEventListener('click', () => renderDay(i));
+    rail.appendChild(b);
+  });
+}
+function updateRailActive() {
+  const rail = document.getElementById('rail');
+  const buttons = rail.querySelectorAll('button');
+  buttons.forEach((b, idx) => {
+    if (idx === 0) b.classList.toggle('active', activeDayIndex === -1);
+    else b.classList.toggle('active', activeDayIndex === idx - 1);
+  });
+}
+
+/* ============ 7. 起動（スタイル読み込み完了後に描画開始） ============ */
+map.on('load', () => {
+  buildRail();
+  renderOverview();
+});
+</script>
+</body>
+</html>
