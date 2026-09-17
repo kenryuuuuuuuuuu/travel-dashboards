@@ -25,9 +25,12 @@ body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:'Zen Kaku Gothic New',sans-serif; font-size:15px; line-height:1.6;
   -webkit-text-size-adjust:100%;
+  display:flex; flex-direction:column;
+  height:100vh; height:100dvh; overflow:hidden;
 }
 h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .topbar{
+  flex:0 0 auto;
   display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
   padding-left:calc(16px + env(safe-area-inset-left));
@@ -41,7 +44,7 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .header-phrase-link:active{ background:var(--sky); color:#fff; }
 .topbar .meta b{ color:var(--earth); }
 :root{ --navh:56px; }
-.app{ display:none; flex-direction:column; height:calc(100vh - 50px - var(--navh) - env(safe-area-inset-bottom)); height:calc(100dvh - 50px - var(--navh) - env(safe-area-inset-bottom)); min-height:420px; }
+.app{ display:none; flex-direction:column; flex:1 1 auto; min-height:0; }
 .app.screen-active{ display:flex; }
 .rail{
   width:100%; flex:0 0 auto; background:var(--sky); color:#fff;
@@ -51,21 +54,21 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 }
 .rail::-webkit-scrollbar{ display:none; }
 .rail button{
-  all:unset; cursor:pointer; padding:10px 14px; min-width:56px; min-height:48px; text-align:center;
+  all:unset; cursor:pointer; padding:8px 10px; min-width:60px; min-height:48px; text-align:center;
   border-bottom:3px solid transparent; display:flex; flex-direction:row;
-  align-items:center; justify-content:center; gap:6px; flex:0 0 auto; white-space:nowrap;
+  align-items:center; justify-content:center; gap:5px; flex:0 0 auto; white-space:nowrap;
 }
 .rail button:active{ background:rgba(255,255,255,.18); }
 .rail button.active{ background:rgba(255,255,255,.12); border-bottom-color:var(--gold); color:var(--gold); }
-.rail .r-num{ font-family:'Shippori Mincho',serif; font-size:17px; font-weight:700; line-height:1; }
-.rail .r-sub{ font-size:10.5px; opacity:.85; }
+.rail .r-num{ font-family:'Shippori Mincho',serif; font-size:16px; font-weight:700; line-height:1; }
+.rail .r-sub{ font-size:9.5px; opacity:.85; white-space:nowrap; }
 .rail .r-overview{ background:rgba(0,0,0,.15); font-weight:700; font-size:12px; padding:10px 16px; min-height:48px; min-width:auto; letter-spacing:.02em; }
 .rail .r-overview.active{ background:rgba(255,255,255,.12); border-bottom-color:var(--gold); color:var(--gold); }
 
 .main{ flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; }
 .headerband{ padding:12px 16px 10px; padding-left:calc(16px + env(safe-area-inset-left)); padding-right:calc(16px + env(safe-area-inset-right)); border-bottom:1px solid var(--line); background:var(--panel); }
-.headerband h2{ margin:0 0 4px; font-size:16px; line-height:1.4; color:var(--sky); }
-.headerband .highlight{ color:var(--ink-soft); font-size:12.5px; max-width:820px; }
+.headerband h2{ margin:0 0 4px; font-size:16px; line-height:1.4; color:var(--sky); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.headerband .highlight{ color:var(--ink-soft); font-size:12.5px; max-width:820px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .stat-strip{ display:flex; gap:7px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; margin:9px -16px 0; padding:0 16px 2px; scrollbar-width:none; }
 .stat-strip::-webkit-scrollbar{ display:none; }
 .chip{
@@ -81,7 +84,7 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .chip.note{ background:none; border-style:dashed; color:var(--ink-soft); }
 
 .content{ flex:1; display:flex; min-height:0; flex-direction:column; }
-.mapwrap{ flex:0 0 38vh; flex:0 0 38dvh; position:relative; border-right:none; border-bottom:1px solid var(--line); }
+.mapwrap{ flex:0 0 26vh; flex:0 0 26dvh; position:relative; border-right:none; border-bottom:1px solid var(--line); }
 #map{ position:absolute; inset:0; background:#dfe6e2; }
 .timeline{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--panel);
   padding:6px 0 calc(30px + env(safe-area-inset-bottom));
@@ -130,13 +133,14 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .ov-legend .sw{ width:12px; height:4px; flex:0 0 12px; }
 
 .wx-panel{
-  position:absolute; left:8px; top:8px; z-index:500; background:rgba(255,255,255,.95);
-  border:1px solid var(--line); padding:8px 11px; font-size:11px; min-width:120px; max-width:170px;
+  position:absolute; left:6px; top:6px; z-index:500; background:rgba(255,255,255,.95);
+  border:1px solid var(--line); padding:5px 8px; font-size:10px; min-width:96px; max-width:140px;
 }
-.wx-row{ display:flex; align-items:center; gap:7px; }
-.wx-temp{ font-weight:700; font-variant-numeric:tabular-nums; font-size:15px; color:var(--ink); white-space:nowrap; }
-.wx-label{ color:var(--ink-soft); font-size:10px; margin-top:3px; line-height:1.4; }
-.wx-loading{ color:var(--ink-soft); font-size:10.5px; }
+.wx-row{ display:flex; align-items:center; gap:5px; }
+.wx-row svg{ width:18px; height:18px; }
+.wx-temp{ font-weight:700; font-variant-numeric:tabular-nums; font-size:12.5px; color:var(--ink); white-space:nowrap; }
+.wx-label{ color:var(--ink-soft); font-size:9px; margin-top:2px; line-height:1.3; }
+.wx-loading{ color:var(--ink-soft); font-size:9.5px; }
 .wx-icon-clear,.wx-icon-mclear{ color:var(--gold); }
 .wx-icon-cloudy,.wx-icon-fog{ color:var(--ink-soft); }
 .wx-icon-rain{ color:var(--sky-soft); }
@@ -150,7 +154,7 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
   .topbar{ padding:14px 20px; }
   .topbar h1{ font-size:19px; }
   .topbar .meta{ display:block; font-size:12px; }
-  .app{ flex-direction:row; height:calc(100vh - 54px - var(--navh)); }
+  .app{ flex-direction:row; }
   .rail{ width:104px; flex:0 0 104px; flex-direction:column; overflow-x:visible; overflow-y:auto; }
   .rail button{ flex-direction:column; padding:12px 8px; min-height:0; border-bottom:1px solid rgba(255,255,255,.14); border-left:none; }
   .rail button.active{ background:var(--gold); color:var(--sky); border-bottom-color:transparent; }
@@ -169,7 +173,7 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 
 /* ---- 下部ナビ（旅程／ガイド／旅の道具） ---- */
 .bottomnav{
-  position:fixed; left:0; right:0; bottom:0; z-index:900;
+  flex:0 0 auto; z-index:900;
   height:calc(var(--navh) + env(safe-area-inset-bottom));
   padding-bottom:env(safe-area-inset-bottom);
   display:flex; background:var(--panel); border-top:1px solid var(--line);
@@ -399,6 +403,27 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 const TRIP = [{"date": "2026/9/19", "dow": "土", "title": "Day1：出発・移動日（釜山乗継）", "highlight": "釜山乗継の弾丸移動日。景色より移動の効率を優先する日。", "stops": [{"order": 1, "lat": 33.3212, "lon": 130.9414, "precision": "推定", "name": "自宅（日田）", "arrive_move": "-", "items": [{"start": "12:00", "end": "13:00", "act": "荷物最終チェック・出発", "place": "自宅", "book": "-", "move": "-", "memo": "往路の受託手荷物は15kg/人と厳しめ。防寒着はかさばるので機内持込に一部逃がす", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 33.585, "lon": 130.4491, "precision": "確定", "name": "福岡空港", "arrive_move": "電車/車", "items": [{"start": "13:00", "end": "13:50", "act": "移動", "place": "自宅→福岡空港", "book": "-", "move": "電車/車", "memo": "経路により所要変動。実家に立ち寄る予定がある場合は前日入りも検討", "status": "案", "type": "rest"}, {"start": "13:50", "end": "16:55", "act": "空港到着・国際線チェックイン", "place": "福岡空港 国際線ターミナル", "book": "不要", "move": "-", "memo": "3時間前推奨。イースター航空カウンター。釜山までの区間のみのチェックイン", "status": "確定", "type": "rest"}]}, {"order": 3, "lat": 35.1729, "lon": 128.9472, "precision": "確定", "name": "金海国際空港（釜山）", "arrive_move": "飛行機", "items": [{"start": "16:55", "end": "18:05", "act": "フライト ZE944", "place": "福岡空港→金海国際空港", "book": "済", "move": "飛行機", "memo": "イースター航空　PNR：（非公開）　受託15kg/人", "status": "確定", "type": "flight"}, {"start": "18:05", "end": "21:35", "act": "乗継（3時間30分）★荷物受取・再チェックイン", "place": "金海国際空港", "book": "要確認", "move": "徒歩", "memo": "★スルーバゲージ対象外。一度荷物を受け取り、チェジュ航空カウンターで再度預ける必要あり", "status": "要手配", "type": "todo"}]}, {"order": 4, "lat": 47.6514, "lon": 106.8216, "precision": "確定", "name": "チンギスハーン国際空港（UB）", "arrive_move": "飛行機", "items": [{"start": "21:35", "end": "00:35+1", "act": "フライト 7C5257", "place": "金海国際空港→チンギスハーン国際空港", "book": "済", "move": "飛行機", "memo": "チェジュ航空　PNR：（非公開）　受託15kg/人", "status": "確定", "type": "flight"}]}], "weather": {"lat": 47.6514, "lon": 106.8216, "place": "チンギスハーン国際空港（UB）"}}, {"date": "2026/9/20", "dow": "日", "title": "Day2：深夜到着＋ウランバートル市内（唯一の自由行動日）", "highlight": "唯一の自由行動日。仏教寺院・広場・博物館を巡り、モンゴルの空気に慣れる日。", "stops": [{"order": 1, "lat": 47.6514, "lon": 106.8216, "precision": "確定", "name": "チンギスハーン国際空港（UB）", "arrive_move": "-", "items": [{"start": "00:35", "end": "01:30", "act": "入国審査・荷物受取・両替", "place": "チンギスハーン国際空港", "book": "不要", "move": "-", "memo": "空港1F・2Fに24時間営業の両替所あり", "status": "確定", "type": "rest"}]}, {"order": 2, "lat": 47.9124, "lon": 106.9139, "precision": "確定", "name": "Bayangol Hotel", "arrive_move": "送迎車/タクシー", "items": [{"start": "01:30", "end": "02:30", "act": "空港→ホテル移動", "place": "空港→Bayangol Hotel", "book": "★要手配", "move": "送迎車/タクシー", "memo": "深夜のため事前送迎手配を推奨（予約番号：（非公開）／TEL：（非公開））", "status": "要手配", "type": "todo"}, {"start": "02:30", "end": "10:00", "act": "チェックイン・就寝", "place": "Bayangol Hotel（Chinggis Ave 5）", "book": "済", "move": "-", "memo": "深夜着になる旨を必ず事前連絡。無断不泊は全額キャンセル料扱いなので要注意", "status": "要手配", "type": "todo"}, {"start": "10:00", "end": "11:00", "act": "起床・準備", "place": "Bayangol Hotel", "book": "-", "move": "-", "memo": "朝食が部屋料金に含まれるか予約特典に記載なし（フィットネス・駐車場・WiFiのみ記載）。要確認", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 47.9231, "lon": 106.895, "precision": "確定", "name": "ガンダン寺", "arrive_move": "タクシー", "items": [{"start": "11:00", "end": "11:20", "act": "移動", "place": "ホテル→ガンダン寺", "book": "不要", "move": "タクシー", "memo": "約6km", "status": "案", "type": "rest"}, {"start": "11:20", "end": "12:30", "act": "ガンダン寺 見学", "place": "ガンダン・テクチェンリン寺院", "book": "不要", "move": "徒歩", "memo": "9:00〜17:00。祈りを捧げる地元の人の姿が一番の見どころ", "status": "案", "type": "city"}]}, {"order": 4, "lat": 47.916, "lon": 106.906, "precision": "確定", "name": "Khaan Buuz（食堂）", "arrive_move": "徒歩/タクシー", "items": [{"start": "12:30", "end": "13:00", "act": "移動", "place": "ガンダン寺→国営百貨店周辺", "book": "不要", "move": "徒歩/タクシー", "memo": "約2km", "status": "案", "type": "rest"}, {"start": "13:00", "end": "14:00", "act": "昼食（ローカル食堂）", "place": "Khaan Buuz（国営百貨店向かい）", "book": "不要", "move": "徒歩", "memo": "ボーズとホーショールを指差しで注文可。1,200MNT〜", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 47.9226, "lon": 106.9149, "precision": "確定", "name": "チンギスハーン国立博物館", "arrive_move": "徒歩", "items": [{"start": "14:00", "end": "14:20", "act": "移動", "place": "→チンギスハーン国立博物館", "book": "不要", "move": "徒歩", "memo": "スフバートル広場の北西側", "status": "案", "type": "rest"}, {"start": "14:20", "end": "16:30", "act": "チンギスハーン国立博物館", "place": "チンギスハーン国立博物館", "book": "任意", "move": "徒歩", "memo": "2022年開館・9階建て。9:00〜20:00。入場3万MNT＋最上階2万MNT", "status": "案", "type": "city"}]}, {"order": 6, "lat": 47.919, "lon": 106.9175, "precision": "確定", "name": "スフバートル広場", "arrive_move": "徒歩", "items": [{"start": "16:30", "end": "17:00", "act": "スフバートル広場 散策", "place": "チンギスハーン広場", "book": "不要", "move": "徒歩", "memo": "博物館のすぐ南", "status": "案", "type": "city"}]}, {"order": 7, "lat": 47.9168, "lon": 106.9064, "precision": "確定", "name": "国営百貨店", "arrive_move": "徒歩", "items": [{"start": "17:00", "end": "17:45", "act": "お土産の下見", "place": "国営百貨店（State Department Store）", "book": "不要", "move": "徒歩", "memo": "9:00〜22:00。6Fが土産・カシミヤ", "status": "案", "type": "city"}]}, {"order": 8, "lat": 47.9109, "lon": 106.92, "precision": "確定", "name": "Tumen Ekh Ensemble", "arrive_move": "タクシー", "items": [{"start": "18:00", "end": "19:10", "act": "民族音楽・舞踊ショー", "place": "Tumen Ekh Ensemble", "book": "当日券", "move": "タクシー", "memo": "毎日18:00開演・約60分。60,000MNT前後", "status": "案", "type": "city"}]}, {"order": 9, "lat": 47.8841, "lon": 106.9154, "precision": "確定", "name": "ザイサン記念碑", "arrive_move": "タクシー", "items": [{"start": "17:00", "end": "18:30", "act": "【代替案】ザイサン・トルゴイの丘", "place": "ザイサン記念碑", "book": "不要", "move": "タクシー", "memo": "224段の階段の上から市街を一望", "status": "案", "type": "city"}]}, {"order": 10, "lat": 47.9258, "lon": 106.916, "precision": "確定", "name": "Modern Nomads", "arrive_move": "徒歩/タクシー", "items": [{"start": "19:30", "end": "21:00", "act": "夕食", "place": "Modern Nomads 2号店 など", "book": "不要", "move": "徒歩/タクシー", "memo": "英語メニューあり", "status": "案", "type": "meal"}]}, {"order": 11, "lat": 47.9124, "lon": 106.9139, "precision": "確定", "name": "Bayangol Hotel", "arrive_move": "タクシー", "items": [{"start": "21:30", "end": "", "act": "帰宿・就寝", "place": "Bayangol Hotel", "book": "-", "move": "タクシー", "memo": "翌朝9:00にツアー出発", "status": "案", "type": "rest"}]}], "weather": {"lat": 47.9124, "lon": 106.9139, "place": "Bayangol Hotel"}}, {"date": "2026/9/21", "dow": "月", "title": "Day3：ツアー1日目　テレルジ国立公園（草原デビュー）", "highlight": "草原デビュー。亀石・遊牧民ゲル・乗馬・星空観察という「初めての景色」が集中する1日。", "stops": [{"order": 1, "lat": 47.9124, "lon": 106.9139, "precision": "確定", "name": "Bayangol Hotel", "arrive_move": "-", "items": [{"start": "07:30", "end": "08:30", "act": "朝食", "place": "Bayangol Hotel", "book": "要確認", "move": "-", "memo": "朝食が予約に含まれるか未確認。含まれない場合はロビー階のレストランか、外で軽く済ませる想定", "status": "要確認", "type": "todo"}, {"start": "08:30", "end": "09:00", "act": "チェックアウト・荷造り", "place": "Bayangol Hotel", "book": "-", "move": "-", "memo": "全荷物を持って移動。以降3泊はゲル", "status": "確定", "type": "rest"}, {"start": "09:00", "end": "09:15", "act": "ガイド・ドライバーと合流", "place": "Bayangol Hotel ロビー", "book": "済", "move": "-", "memo": "日本語ガイド（氏名は非公開）TEL：（非公開）", "status": "確定", "type": "rest"}]}, {"order": 2, "lat": 47.9077, "lon": 107.4227, "precision": "確定", "name": "亀石（テレルジ）", "arrive_move": "専用車", "items": [{"start": "09:15", "end": "11:00", "act": "テレルジ国立公園へ移動", "place": "UB市内→テレルジ", "book": "済", "move": "専用車", "memo": "約60〜70km・約1.5時間", "status": "確定", "type": "rest"}, {"start": "11:00", "end": "12:00", "act": "亀石（タートルロック）見学", "place": "テレルジ国立公園", "book": "済", "move": "徒歩", "memo": "高さ約15mの巨岩", "status": "確定", "type": "field"}]}, {"order": 3, "lat": 47.905, "lon": 107.41, "precision": "推定", "name": "ゲルキャンプ（テレルジ）", "arrive_move": "専用車", "items": [{"start": "12:00", "end": "13:00", "act": "遊牧民ゲル訪問・交流", "place": "テレルジ周辺の遊牧民ゲル", "book": "済", "move": "専用車", "memo": "スーテーツァイを勧められる。ゲルの敷居は踏まない", "status": "確定", "type": "field"}, {"start": "13:00", "end": "14:00", "act": "昼食（遊牧民のゲルにて）", "place": "同上", "book": "済", "move": "-", "memo": "この旅で最もローカルな食事のひとつ", "status": "確定", "type": "meal"}]}, {"order": 4, "lat": 47.9355, "lon": 107.4275, "precision": "確定", "name": "アリヤバラ寺院", "arrive_move": "徒歩", "items": [{"start": "14:00", "end": "15:30", "act": "アリヤバラ寺院へハイキング", "place": "アリヤバラ寺院", "book": "済", "move": "徒歩", "memo": "吊り橋と階段を登る。標高1,600m前後", "status": "確定", "type": "field"}]}, {"order": 5, "lat": 47.9077, "lon": 107.4227, "precision": "確定", "name": "亀石（テレルジ）", "arrive_move": "馬", "items": [{"start": "15:30", "end": "17:00", "act": "乗馬・ハイキング", "place": "テレルジ周辺", "book": "済", "move": "馬", "memo": "初心者は引き馬", "status": "確定", "type": "field"}]}, {"order": 6, "lat": 47.905, "lon": 107.41, "precision": "推定", "name": "ゲルキャンプ（テレルジ）", "arrive_move": "専用車", "items": [{"start": "17:00", "end": "18:00", "act": "ゲルキャンプ チェックイン", "place": "ツーリストキャンプ（テレルジ）", "book": "済", "move": "専用車", "memo": "シャワー・トイレは別棟の共同施設", "status": "確定", "type": "rest"}, {"start": "18:30", "end": "20:00", "act": "夕食", "place": "ゲルキャンプ内レストラン", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}, {"start": "20:00", "end": "21:30", "act": "星空観察", "place": "キャンプ周辺", "book": "済", "move": "徒歩", "memo": "9月下旬の夜は0℃前後。フル防寒必須", "status": "確定", "type": "field"}, {"start": "21:30", "end": "", "act": "就寝", "place": "ゲルキャンプ", "book": "-", "move": "-", "memo": "薪ストーブは夜中に消える", "status": "確定", "type": "rest"}]}], "weather": {"lat": 47.905, "lon": 107.41, "place": "ゲルキャンプ（テレルジ）"}}, {"date": "2026/9/22", "dow": "火", "title": "Day4：チンギスハーン騎馬像・カザフ民族　→　ブルドへ長距離移動", "highlight": "40mのチンギスハーン騎馬像と、鷹狩りで有名なカザフ民族の文化に触れる日。後半は5時間の長距離移動。", "stops": [{"order": 1, "lat": 47.905, "lon": 107.41, "precision": "推定", "name": "ゲルキャンプ（テレルジ）", "arrive_move": "-", "items": [{"start": "08:00", "end": "09:00", "act": "朝食", "place": "ゲルキャンプ", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}]}, {"order": 2, "lat": 47.9077, "lon": 107.4227, "precision": "確定", "name": "亀石（テレルジ）", "arrive_move": "徒歩", "items": [{"start": "09:00", "end": "10:30", "act": "自由時間", "place": "テレルジ周辺", "book": "済", "move": "徒歩", "memo": "朝の草原を散歩", "status": "確定", "type": "field"}]}, {"order": 3, "lat": 47.8082, "lon": 107.5298, "precision": "確定", "name": "チンギスハーン騎馬像", "arrive_move": "専用車", "items": [{"start": "10:30", "end": "11:30", "act": "チンギスハーン騎馬像へ移動", "place": "テレルジ→ツォンジンボルドグ", "book": "済", "move": "専用車", "memo": "約50km", "status": "確定", "type": "rest"}, {"start": "11:30", "end": "13:00", "act": "チンギスハーン騎馬像テーマパーク", "place": "チンギスハーン騎馬像", "book": "済", "move": "徒歩", "memo": "高さ40m。馬の頭部が展望台", "status": "確定", "type": "field"}]}, {"order": 4, "lat": 47.7709, "lon": 107.2548, "precision": "推定", "name": "ナライハ区", "arrive_move": "専用車", "items": [{"start": "13:00", "end": "14:30", "act": "カザフ民族のゲル訪問・昼食", "place": "ナライハ区", "book": "済", "move": "専用車", "memo": "バヤンウルギー県出身のカザフ民族。鷹狩り文化で有名", "status": "確定", "type": "meal"}, {"start": "14:30", "end": "15:30", "act": "モスク見学", "place": "ナライハ区のモスク", "book": "済", "move": "徒歩", "memo": "露出を控えた服装で", "status": "確定", "type": "field"}]}, {"order": 5, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "専用車", "items": [{"start": "16:00", "end": "21:00", "act": "ブルドへ長距離移動", "place": "ナライハ→ブルド地方", "book": "済", "move": "専用車", "memo": "★約5時間の移動。酔い止め・軽食・モバイルバッテリー準備", "status": "確定", "type": "rest"}, {"start": "21:00", "end": "22:00", "act": "チェックイン・夕食", "place": "ツーリストキャンプ（ブルド）", "book": "済", "move": "-", "memo": "到着が遅いため夕食は簡素になる可能性", "status": "確定", "type": "meal"}, {"start": "22:00", "end": "", "act": "就寝", "place": "ツーリストキャンプ", "book": "-", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 47.3313, "lon": 103.6895, "place": "ブルド地方（推定）"}}, {"date": "2026/9/23", "dow": "水", "title": "Day5：カラコルム遺跡＋草原の乗馬・ラクダ（遊牧民ゲル泊）", "highlight": "モンゴル帝国の古都カラコルムへ。午後は草原の乗馬とラクダ、夜は遊牧民の家庭に泊まる、この旅で最も特殊な一晩。", "stops": [{"order": 1, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "-", "items": [{"start": "08:00", "end": "09:00", "act": "朝食", "place": "ツーリストキャンプ", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}]}, {"order": 2, "lat": 47.1964, "lon": 102.8236, "precision": "確定", "name": "ハルホリン", "arrive_move": "専用車", "items": [{"start": "09:00", "end": "10:00", "act": "カラコルムへ移動", "place": "ブルド→ハルホリン", "book": "済", "move": "専用車", "memo": "約1時間", "status": "確定", "type": "rest"}]}, {"order": 3, "lat": 47.2012, "lon": 102.841, "precision": "確定", "name": "エルデネ・ゾー寺院", "arrive_move": "徒歩", "items": [{"start": "10:00", "end": "12:00", "act": "エルデネ・ゾー寺院 見学", "place": "エルデネ・ゾー寺院", "book": "済", "move": "徒歩", "memo": "1586年創建。108基の仏塔", "status": "確定", "type": "field"}, {"start": "12:00", "end": "12:30", "act": "亀石（亀趺）見学", "place": "カラコルム遺跡", "book": "済", "move": "徒歩", "memo": "花崗岩製", "status": "確定", "type": "field"}]}, {"order": 4, "lat": 47.1964, "lon": 102.8236, "precision": "確定", "name": "ハルホリン", "arrive_move": "-", "items": [{"start": "12:30", "end": "13:30", "act": "昼食", "place": "ハルホリン周辺", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}]}, {"order": 5, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "専用車", "items": [{"start": "13:30", "end": "14:30", "act": "ブルドへ戻る", "place": "ハルホリン→ブルド", "book": "済", "move": "専用車", "memo": "", "status": "確定", "type": "rest"}, {"start": "14:30", "end": "16:00", "act": "遊牧民との乗馬体験", "place": "ブルドの大草原", "book": "済", "move": "馬", "memo": "テレルジより開けた地形での外乗", "status": "確定", "type": "field"}, {"start": "16:00", "end": "17:30", "act": "ラクダ乗り体験", "place": "近隣の砂丘", "book": "済", "move": "ラクダ", "memo": "フタコブラクダ。草原と砂丘の地形の落差が面白い", "status": "確定", "type": "field"}, {"start": "17:30", "end": "19:00", "act": "遊牧民の生活体験", "place": "ブルドの遊牧民ゲル", "book": "済", "move": "-", "memo": "乳搾り・餌やりなど。実際の遊牧民宅に泊まる特殊な一夜", "status": "確定", "type": "field"}, {"start": "19:00", "end": "20:30", "act": "夕食（遊牧民の家庭料理）", "place": "同上", "book": "済", "move": "-", "memo": "観光用にアレンジされていない味", "status": "確定", "type": "meal"}, {"start": "20:30", "end": "21:30", "act": "星空・夜の草原", "place": "ゲル周辺", "book": "済", "move": "徒歩", "memo": "★トイレ・シャワーは基本的に無い前提で", "status": "確定", "type": "field"}, {"start": "21:30", "end": "", "act": "就寝", "place": "遊牧民のゲル", "book": "-", "move": "-", "memo": "最も冷える夜になる可能性", "status": "確定", "type": "rest"}]}], "weather": {"lat": 47.3313, "lon": 103.6895, "place": "ブルド地方（推定）"}}, {"date": "2026/9/24", "dow": "木", "title": "Day6：ホスタイ国立保護区（野生馬タヒ）→ ウランバートル帰還・ツアー終了", "highlight": "世界最後の野生馬タヒに会いに。ツアーは昼食後に解散し、ウランバートルでの最後の夜へ。", "stops": [{"order": 1, "lat": 47.3313, "lon": 103.6895, "precision": "推定", "name": "ブルド地方（推定）", "arrive_move": "-", "items": [{"start": "07:30", "end": "08:30", "act": "朝食", "place": "遊牧民のゲル", "book": "済", "move": "-", "memo": "", "status": "確定", "type": "meal"}, {"start": "08:30", "end": "09:00", "act": "出発準備・お別れ", "place": "ブルド", "book": "済", "move": "-", "memo": "現金の心付けの要否をガイドに確認", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 47.74, "lon": 106.19, "precision": "推定", "name": "ホスタイ国立公園", "arrive_move": "専用車", "items": [{"start": "09:00", "end": "11:30", "act": "ホスタイ国立保護区へ移動", "place": "ブルド→ホスタイ", "book": "済", "move": "専用車", "memo": "", "status": "確定", "type": "rest"}, {"start": "11:30", "end": "13:30", "act": "ホスタイ国立保護区観光", "place": "ホスタイ国立公園", "book": "済", "move": "専用車/徒歩", "memo": "野生馬タヒ。見られない可能性あり", "status": "確定", "type": "field"}, {"start": "13:30", "end": "14:30", "act": "昼食", "place": "保護区周辺", "book": "済", "move": "-", "memo": "ツアーに含まれる最後の食事", "status": "確定", "type": "meal"}]}, {"order": 3, "lat": 47.9188, "lon": 106.9227, "precision": "確定", "name": "Ulaanbaatar Hotel", "arrive_move": "専用車", "items": [{"start": "14:30", "end": "16:30", "act": "ウランバートルへ移動・ツアー終了", "place": "ホスタイ→UB市内ホテル", "book": "済", "move": "専用車", "memo": "約100km", "status": "確定", "type": "rest"}, {"start": "16:30", "end": "17:30", "act": "ホテル チェックイン", "place": "Ulaanbaatar Hotel", "book": "済", "move": "-", "memo": "確定済み（Trip.com確認番号・PINは非公開）。スーペリアツインルーム。キャンセル無料は9/23 23:59まで", "status": "確定", "type": "rest"}]}, {"order": 4, "lat": 47.9168, "lon": 106.9064, "precision": "確定", "name": "国営百貨店", "arrive_move": "徒歩/タクシー", "items": [{"start": "17:30", "end": "19:00", "act": "シャワー・休憩・お土産購入", "place": "国営百貨店 など", "book": "不要", "move": "徒歩/タクシー", "memo": "まずシャワー。6Fでカシミヤ・土産をまとめ買い", "status": "案", "type": "city"}]}, {"order": 5, "lat": 47.9188, "lon": 106.9227, "precision": "推定", "name": "夕食のお店（未定・ホテル周辺）", "arrive_move": "徒歩/タクシー", "items": [{"start": "19:00", "end": "21:00", "act": "最後の夕食", "place": "モンゴル料理 or 韓国料理", "book": "任意", "move": "徒歩/タクシー", "memo": "羊が続いた反動で別ジャンルも現実的", "status": "案", "type": "meal"}]}, {"order": 6, "lat": 47.9188, "lon": 106.9227, "precision": "確定", "name": "Ulaanbaatar Hotel", "arrive_move": "-", "items": [{"start": "21:00", "end": "", "act": "帰宿・パッキング", "place": "Ulaanbaatar Hotel", "book": "-", "move": "-", "memo": "トゥグルクの残額を確認", "status": "案", "type": "rest"}]}], "weather": {"lat": 47.9188, "lon": 106.9227, "place": "Ulaanbaatar Hotel"}}, {"date": "2026/9/25", "dow": "金", "title": "Day7：帰国", "highlight": "ソウル経由で帰国。", "stops": [{"order": 1, "lat": 47.9188, "lon": 106.9227, "precision": "確定", "name": "Ulaanbaatar Hotel", "arrive_move": "-", "items": [{"start": "07:00", "end": "08:00", "act": "朝食・最終チェック", "place": "Ulaanbaatar Hotel", "book": "済", "move": "-", "memo": "朝食は予約に含まれる（2名分・確定済み）。受託荷物23kg×1個/人も確認", "status": "確定", "type": "meal"}, {"start": "08:30", "end": "09:00", "act": "チェックアウト", "place": "Ulaanbaatar Hotel", "book": "-", "move": "-", "memo": "チェックアウトは12:00まででOKなので、8:30出発は余裕あり", "status": "確定", "type": "rest"}]}, {"order": 2, "lat": 47.6514, "lon": 106.8216, "precision": "確定", "name": "チンギスハーン国際空港（UB）", "arrive_move": "タクシー/送迎", "items": [{"start": "09:00", "end": "10:00", "act": "空港へ移動", "place": "UB市内→チンギスハーン国際空港", "book": "★要手配", "move": "タクシー/送迎", "memo": "約50km・約60分", "status": "要手配", "type": "todo"}, {"start": "10:00", "end": "13:00", "act": "チェックイン・出国手続き", "place": "チンギスハーン国際空港", "book": "不要", "move": "-", "memo": "3時間前推奨", "status": "確定", "type": "rest"}]}, {"order": 3, "lat": 37.4689, "lon": 126.4334, "precision": "確定", "name": "仁川国際空港 T2", "arrive_move": "飛行機", "items": [{"start": "13:00", "end": "17:10", "act": "フライト KE2042", "place": "チンギスハーン国際空港→仁川国際空港T2", "book": "済", "move": "飛行機", "memo": "大韓航空　PNR：（非公開）　受託23kg×1個/人", "status": "確定", "type": "flight"}, {"start": "17:10", "end": "18:35", "act": "乗継（1時間25分）", "place": "仁川国際空港T2", "book": "-", "move": "徒歩", "memo": "同一T2内・荷物はスルー", "status": "確定", "type": "rest"}]}, {"order": 4, "lat": 33.585, "lon": 130.4491, "precision": "確定", "name": "福岡空港", "arrive_move": "飛行機", "items": [{"start": "18:35", "end": "20:00", "act": "フライト KE781", "place": "仁川国際空港T2→福岡空港", "book": "済", "move": "飛行機", "memo": "大韓航空　PNR：（非公開）", "status": "確定", "type": "flight"}, {"start": "20:00", "end": "21:00", "act": "帰国・入国手続き", "place": "福岡空港", "book": "-", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}, {"order": 5, "lat": 33.3212, "lon": 130.9414, "precision": "推定", "name": "自宅（日田）", "arrive_move": "電車/車", "items": [{"start": "21:00", "end": "", "act": "帰宅", "place": "福岡空港→自宅", "book": "-", "move": "電車/車", "memo": "最終電車の時刻を事前確認", "status": "案", "type": "rest"}]}], "weather": {"lat": 33.3212, "lon": 130.9414, "place": "自宅（日田）"}}];
 
 const DAY_COLORS = ['#1C4E63','#C9962B','#7A4B30','#3E7C99','#4E7A52','#8E5B3D','#6C5B8E'];
+
+// 旅程画面ヘッダーは1行表示を優先するため、正式なタイトル・説明とは別に短縮表示を用意する
+// （元の長い文言はTRIP側にそのまま残し、全体ルート画面の凡例など他の場所では従来通り使う）
+const SHORT_DAY_TITLE = [
+  'Day1：出発・移動日（釜山乗継）',
+  'Day2：ウランバートル市内（自由行動）',
+  'Day3：テレルジ国立公園（草原へ）',
+  'Day4：騎馬像・カザフ民族→ブルド',
+  'Day5：カラコルム遺跡と草原の乗馬',
+  'Day6：ホスタイ保護区→UB帰還',
+  'Day7：帰国（仁川経由）',
+];
+const SHORT_DAY_HIGHLIGHT = [
+  '釜山乗継の弾丸移動日。',
+  '唯一の自由行動日。寺院・博物館・広場へ。',
+  '草原デビュー。亀石・ゲル・乗馬・星空。',
+  '騎馬像とカザフ文化。後半5時間の長距離移動。',
+  '古都カラコルムへ。夜は遊牧民の家庭に泊まる。',
+  '野生馬タヒに会いに。午後はUBで最後の夜。',
+  'ソウル経由で帰国。',
+];
 
 /* ============ 0.5 ガイドデータ読み込み ============ */
 let GUIDE = { chapters: [], articles: [], sources: [], images: [], figures: [], phrases: [] };
@@ -822,8 +847,8 @@ async function renderDay(dayIndex) {
   clearMap();
   removeOvLegend();
   const day = TRIP[dayIndex];
-  document.getElementById('dayTitle').textContent = `${day.date}（${day.dow}）　${day.title}`;
-  document.getElementById('dayHighlight').textContent = day.highlight || "";
+  document.getElementById('dayTitle').textContent = SHORT_DAY_TITLE[dayIndex] || day.title;
+  document.getElementById('dayHighlight').textContent = SHORT_DAY_HIGHLIGHT[dayIndex] || day.highlight || "";
 
   const stops = day.stops;
   const boundsPts = [];
@@ -1029,7 +1054,8 @@ function buildRail() {
   rail.appendChild(ov);
   TRIP.forEach((day, i) => {
     const b = document.createElement('button');
-    b.innerHTML = `<div class="r-num">${i + 1}</div><div class="r-sub">${day.dow}曜</div>`;
+    const md = day.date.split('/').slice(1).join('/'); // "2026/9/19" -> "9/19"
+    b.innerHTML = `<div class="r-num">${i + 1}</div><div class="r-sub">${md} ${day.dow}</div>`;
     b.addEventListener('click', () => renderDay(i));
     rail.appendChild(b);
   });
