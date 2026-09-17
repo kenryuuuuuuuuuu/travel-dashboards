@@ -2,3 +2,9 @@
 !.gitignore
 !README.md
 !index.html
+!sw.js
+!assets/
+assets/*
+!assets/guide/
+assets/guide/*
+!assets/guide/*.webp
