@@ -6,10 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="台湾・沖縄旅程">
+<meta name="apple-mobile-web-app-title" content="旅のしおり">
 <meta name="theme-color" content="#1C4E63">
 <meta name="robots" content="noindex, nofollow">
-<title>台湾縦断＋沖縄 2026/11/21–12/1｜旅程とフィールドガイド</title>
+<title>旅のしおり</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"/>
@@ -18,111 +18,183 @@
   --bg:#EEF0EA; --panel:#FFFFFF; --ink:#21201C; --ink-soft:#5B584E;
   --sky:#1C4E63; --sky-soft:#3E7C99; --gold:#C9962B; --gold-soft:#E7D6A6;
   --earth:#7A4B30; --alert:#B23A2E; --alert-bg:#F7E4E1; --line:#DBD7C9;
-  --ok-bg:#E7EFE6; --ok-ink:#3E5C3F;
+  --ok-bg:#E7EFE6; --ok-ink:#3E5C3F; --warn-bg:#F6EBCB; --warn-ink:#7A5A12; --hi-bg:#FBF6E9;
+  --navh:58px; --stickyh:110px;
+  --sl:env(safe-area-inset-left); --sr:env(safe-area-inset-right);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{height:100%; overscroll-behavior:none;}
+/* 画面全体を1本のスクロールにする（枠内スクロールの入れ子をやめる）。
+   以前は body を画面の高さに固定し内側をスクロールさせていたため、iOSのPWAで高さの計算がずれる不具合が起きていた。 */
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font-family:'Zen Kaku Gothic New',sans-serif; font-size:15px; line-height:1.6;
+  font-family:'Zen Kaku Gothic New',sans-serif; font-size:16px; line-height:1.6;
   -webkit-text-size-adjust:100%;
-  display:flex; flex-direction:column;
-  /* iOSのPWA(standalone)では起動直後にdvh/visualViewportの確定が遅れ、
-     画面全体の高さが実際より大きく計算されることがある（下部に空白ができる）。
-     JS側でwindow.innerHeightを実測して --app-vh に反映し、それを優先させる。
-     JS未実行・失敗時のフォールバックとして100dvh/100vhを残す。 */
-  height:100vh; height:100dvh; height:var(--app-vh, 100dvh); overflow:hidden;
+  padding-bottom:calc(var(--navh) + env(safe-area-inset-bottom));
 }
+body.map-open{ overflow:hidden; }
 h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
-.topbar{
-  flex:0 0 auto;
-  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
-  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
-  padding-left:calc(16px + env(safe-area-inset-left));
-  padding-right:calc(16px + env(safe-area-inset-right));
-  border-bottom:1px solid var(--line); background:var(--panel);
-}
-.topbar h1{ font-size:17px; font-weight:700; margin:0; color:var(--sky); }
-.topbar .meta{ font-size:11px; color:var(--ink-soft); display:none; }
-.header-phrase-link{ all:unset; cursor:pointer; margin-left:auto; display:flex; align-items:center; gap:5px;
-  font-size:12px; color:var(--sky); border:1px solid var(--sky); border-radius:14px; padding:6px 12px; min-height:36px; white-space:nowrap; }
-.header-phrase-link:active{ background:var(--sky); color:#fff; }
-.topbar .meta b{ color:var(--earth); }
-:root{ --navh:56px; }
-.app{ display:none; flex-direction:column; flex:1 1 auto; min-height:0; }
-.app.screen-active{ display:flex; }
-.rail{
-  width:100%; flex:0 0 auto; background:var(--sky); color:#fff;
-  display:flex; flex-direction:row; overflow-x:auto; -webkit-overflow-scrolling:touch;
-  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
-  scrollbar-width:none;
-}
-.rail::-webkit-scrollbar{ display:none; }
-.rail button{
-  all:unset; cursor:pointer; padding:8px 10px; min-width:60px; min-height:48px; text-align:center;
-  border-bottom:3px solid transparent; display:flex; flex-direction:row;
-  align-items:center; justify-content:center; gap:5px; flex:0 0 auto; white-space:nowrap;
-}
-.rail button:active{ background:rgba(255,255,255,.18); }
-.rail button.active{ background:rgba(255,255,255,.12); border-bottom-color:var(--gold); color:var(--gold); }
-.rail .r-num{ font-family:'Shippori Mincho',serif; font-size:16px; font-weight:700; line-height:1; }
-.rail .r-sub{ font-size:9.5px; opacity:.85; white-space:nowrap; }
-.rail .r-overview{ background:rgba(0,0,0,.15); font-weight:700; font-size:12px; padding:10px 16px; min-height:48px; min-width:auto; letter-spacing:.02em; }
-.rail .r-overview.active{ background:rgba(255,255,255,.12); border-bottom-color:var(--gold); color:var(--gold); }
+[hidden]{ display:none !important; }
 
-.main{ flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; }
-.headerband{ padding:12px 16px 10px; padding-left:calc(16px + env(safe-area-inset-left)); padding-right:calc(16px + env(safe-area-inset-right)); border-bottom:1px solid var(--line); background:var(--panel); }
-.headerband h2{ margin:0 0 4px; font-size:16px; line-height:1.4; color:var(--sky); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.headerband .highlight{ color:var(--ink-soft); font-size:12.5px; max-width:820px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.stat-strip{ display:flex; gap:7px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; margin:9px -16px 0; padding:0 16px 2px; scrollbar-width:none; }
-.stat-strip::-webkit-scrollbar{ display:none; }
-.chip{
-  border:1px solid var(--line); background:var(--bg); padding:5px 10px; font-size:11.5px;
-  display:flex; align-items:center; gap:5px; white-space:nowrap; border-radius:3px; flex:0 0 auto;
-}
-.chip .num{ font-weight:700; font-variant-numeric:tabular-nums; color:var(--sky); }
-.chip.level-楽 .num{ color:var(--ok-ink); }
-.chip.level-中 .num{ color:var(--gold); }
-.chip.level-ハード .num{ color:var(--alert); }
+/* ---- 上部（アプリ名・日付タブ）：常に表示 ---- */
+.stickyhead{ position:sticky; top:0; z-index:800; background:var(--sky); color:#fff; padding-top:env(safe-area-inset-top); }
+.appbar{ display:flex; align-items:center; gap:10px; min-height:48px;
+  padding:4px calc(10px + var(--sr)) 4px calc(16px + var(--sl)); }
+.appbar .brand{ font-family:'Shippori Mincho',serif; font-weight:700; font-size:18px; letter-spacing:.06em; margin:0; white-space:nowrap; }
+.appbar .tripname{ flex:1; min-width:0; font-size:12.5px; opacity:.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.header-phrase-link{ all:unset; box-sizing:border-box; cursor:pointer; flex:0 0 auto; display:flex; align-items:center; gap:4px;
+  font-size:12.5px; color:#fff; border:1px solid rgba(255,255,255,.55); border-radius:18px; padding:0 12px; min-height:36px; white-space:nowrap; }
+.header-phrase-link:active{ background:rgba(255,255,255,.2); }
+.daytabs{ display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  padding:2px calc(12px + var(--sr)) 10px calc(12px + var(--sl)); }
+.daytabs::-webkit-scrollbar{ display:none; }
+body:not([data-screen="trip"]) .daytabs{ display:none; }
+.daytab{ all:unset; box-sizing:border-box; cursor:pointer; flex:0 0 auto; min-width:54px; min-height:44px; padding:4px 9px;
+  border-radius:10px; background:rgba(255,255,255,.1); display:flex; flex-direction:column; align-items:center; justify-content:center;
+  line-height:1.2; text-align:center; }
+.daytab:active{ background:rgba(255,255,255,.22); }
+.daytab .dt-main{ font-weight:700; font-size:14px; font-variant-numeric:tabular-nums; }
+.daytab .dt-sub{ font-size:10.5px; opacity:.8; white-space:nowrap; }
+.daytab.today .dt-sub{ color:var(--gold); opacity:1; font-weight:700; }
+.daytab.active{ background:#fff; color:var(--sky); }
+.daytab.active.today .dt-sub{ color:var(--earth); }
+.daytab.ov{ padding:4px 14px; }
+.offline-banner{ background:var(--warn-bg); color:var(--warn-ink); font-size:12.5px; text-align:center; padding:5px 16px; }
+
+.app{ display:none; }
+.app.screen-active{ display:block; }
+
+/* ---- 日の見出し ---- */
+.dayhead{ background:var(--panel); border-bottom:1px solid var(--line);
+  padding:16px calc(16px + var(--sr)) 14px calc(16px + var(--sl)); }
+.dh-meta{ display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-soft); flex-wrap:wrap; }
+.dh-daynum{ color:#fff; font-weight:700; font-size:12px; padding:1px 9px; border-radius:10px; letter-spacing:.02em; }
+.dh-today{ color:var(--earth); background:var(--gold-soft); font-weight:700; font-size:12px; padding:1px 8px; border-radius:10px; }
+.dayhead h2{ margin:6px 0 2px; font-size:21px; line-height:1.4; color:var(--sky); }
+.dayhead .highlight{ font-size:14px; color:var(--ink-soft); line-height:1.6; }
+.summary{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.chips-inline{ display:contents; }
+.chip{ display:inline-flex; align-items:center; gap:4px; padding:3px 10px; min-height:28px; border-radius:14px; background:var(--bg);
+  border:1px solid var(--line); font-size:12.5px; white-space:nowrap; color:var(--ink); }
+.chip b{ font-variant-numeric:tabular-nums; color:var(--sky); }
+.chip svg{ width:18px; height:18px; flex:0 0 18px; }
+.chip.lv-楽 b{ color:var(--ok-ink); }
+.chip.lv-中 b{ color:var(--earth); }
+.chip.lv-ハード b{ color:var(--alert); }
 .chip.alert{ background:var(--alert-bg); border-color:#E3B7B0; color:var(--alert); }
-.chip.alert .num{ color:var(--alert); }
-.chip.note{ background:none; border-style:dashed; color:var(--ink-soft); }
+.chip.alert b{ color:var(--alert); }
+.chip.muted{ color:var(--ink-soft); background:none; border-style:dashed; }
+.ov-status{ margin-top:12px; font-size:15px; }
+.ov-status b{ font-family:'Shippori Mincho',serif; font-size:26px; color:var(--sky); margin:0 2px; }
+.dayhead .btn{ margin-top:12px; }
 
-.content{ flex:1; display:flex; min-height:0; flex-direction:column; }
-.mapwrap{ flex:0 0 26vh; flex:0 0 26dvh; position:relative; border-right:none; border-bottom:1px solid var(--line); }
+/* ---- ボタン ---- */
+.btn{ all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  min-height:44px; padding:0 18px; border-radius:22px; font-size:14px; font-weight:700; text-align:center; }
+.btn.primary{ background:var(--sky); color:#fff; }
+.btn.primary:active{ background:var(--sky-soft); }
+.btn.ghost{ border:1px solid var(--sky); color:var(--sky); background:var(--panel); }
+.btn.ghost:active{ background:var(--hi-bg); }
+
+/* ---- 次の予定（今日だけ表示） ---- */
+.nextcard{ margin:12px calc(12px + var(--sr)) 0 calc(12px + var(--sl)); background:var(--panel); border:2px solid var(--gold);
+  border-radius:14px; padding:12px 14px; box-shadow:0 2px 10px rgba(33,32,28,.06); }
+.nc-row{ display:flex; gap:10px; align-items:flex-start; }
+.nc-row + .nc-row{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+.nc-label{ flex:0 0 auto; font-size:12px; font-weight:700; color:#fff; background:var(--sky); border-radius:5px; padding:2px 7px; margin-top:2px; }
+.nc-label.now{ background:var(--gold); }
+.nc-label.done{ background:var(--ink-soft); }
+.nc-body{ min-width:0; flex:1; }
+.nc-time{ font-weight:700; font-variant-numeric:tabular-nums; color:var(--sky); margin-right:6px; }
+.nc-act{ font-weight:700; font-size:15.5px; line-height:1.45; }
+.nc-until{ display:inline-block; font-weight:700; color:var(--earth); font-size:14px; margin-top:2px; }
+.nc-sub{ font-size:13.5px; color:var(--ink-soft); margin-top:2px; }
+.nc-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+
+/* ---- 出発前に確認すること（全体画面） ---- */
+.prep{ margin:12px calc(12px + var(--sr)) 0 calc(12px + var(--sl)); background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+.prep summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; min-height:48px; padding:8px 14px; font-weight:700; font-size:15px; }
+.prep summary::-webkit-details-marker{ display:none; }
+.prep summary::after{ content:"＋"; margin-left:auto; color:var(--ink-soft); font-weight:400; }
+.prep[open] summary::after{ content:"－"; }
+.prep-row{ display:flex; gap:10px; align-items:flex-start; padding:10px 14px; border-top:1px solid var(--line); cursor:pointer; font-size:14px; }
+.prep-row:active{ background:var(--hi-bg); }
+.prep-row .pr-date{ flex:0 0 auto; color:var(--ink-soft); font-size:12.5px; font-variant-numeric:tabular-nums; min-width:62px; padding-top:1px; }
+.prep-row .pr-main{ flex:1; min-width:0; }
+
+/* ---- 地図（スマホ：小さく表示しタップで全画面／PC：右側に固定） ---- */
+.mapcol{ padding:12px calc(12px + var(--sr)) 0 calc(12px + var(--sl)); }
+.mapwrap{ position:relative; height:200px; border-radius:14px; overflow:hidden; border:1px solid var(--line); background:#dfe6e2; }
+.mapwrap.ov{ height:240px; }
 #map{ position:absolute; inset:0; background:#dfe6e2; }
-.timeline{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--panel);
-  padding:6px 0 calc(30px + env(safe-area-inset-bottom));
-  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+.map-tap{ all:unset; position:absolute; inset:0; z-index:5; cursor:pointer; }
+.map-hint{ position:absolute; right:8px; bottom:8px; z-index:6; pointer-events:none; background:rgba(255,255,255,.94);
+  border-radius:14px; padding:3px 10px; font-size:12px; font-weight:700; color:var(--sky); box-shadow:0 1px 4px rgba(0,0,0,.12); }
+.map-close{ display:none; }
+.mapwrap.full{ position:fixed; inset:0; height:auto; border-radius:0; border:0; z-index:1000; overscroll-behavior:contain; }
+.mapwrap.full .map-tap, .mapwrap.full .map-hint{ display:none; }
+.mapwrap.full .map-close{ all:unset; box-sizing:border-box; cursor:pointer; position:absolute; z-index:10; display:flex; align-items:center; gap:6px;
+  top:calc(10px + env(safe-area-inset-top)); left:calc(10px + var(--sl)); min-height:44px; padding:0 16px; border-radius:22px;
+  background:var(--sky); color:#fff; font-weight:700; font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,.2); }
+.mapwrap:not(.full) .route-label{ display:none; }
+.mapwrap:not(.full) .maplibregl-ctrl-group{ display:none; }
 
-.stop{ padding:13px 18px 11px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
-.stop:active{ background:#FAFAF6; }
-.stop.hi{ background:#FBF6E9; }
-.stop-head{ display:flex; align-items:center; gap:10px; }
-.badge{
-  flex:0 0 28px; width:28px; height:28px; border-radius:50%; background:var(--sky); color:#fff;
-  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
-  border:2px solid var(--sky);
-}
+/* ---- 予定リスト ---- */
+.timeline{ background:var(--panel); margin-top:12px; border-top:1px solid var(--line); padding-bottom:12px; }
+.stop{ padding:12px calc(16px + var(--sr)) 12px calc(16px + var(--sl)); scroll-margin-top:calc(var(--stickyh) + 8px); transition:background .3s; }
+.stop.hi{ background:var(--hi-bg); }
+.stop-head{ display:flex; align-items:center; gap:8px; }
+.sh-main{ display:flex; align-items:center; gap:10px; flex:1; min-width:0; min-height:44px; cursor:pointer; }
+.badge{ flex:0 0 30px; width:30px; height:30px; border-radius:50%; background:var(--sky); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13.5px; border:2px solid var(--sky); }
 .badge.prec-推定{ background:var(--gold-soft); color:var(--earth); border:2px dashed var(--earth); }
 .badge.prec-未定{ background:#fff; color:var(--alert); border:2px dashed var(--alert); }
-.stop-name{ font-weight:700; font-size:15px; }
-.stop-name .tag{ font-weight:400; font-size:10.5px; color:var(--ink-soft); margin-left:6px; }
-.leg-info{ margin:4px 0 0 38px; font-size:11.5px; color:var(--ink-soft); }
-.leg-info.est::after{ content:"（概算）"; color:var(--gold); }
-.items{ margin:9px 0 0 38px; display:flex; flex-direction:column; gap:9px; }
-.item{ border-left:3px solid var(--line); padding:2px 0 2px 10px; }
+.stop-name{ font-weight:700; font-size:16.5px; line-height:1.35; min-width:0; }
+.navbtn{ all:unset; box-sizing:border-box; flex:0 0 auto; cursor:pointer; display:inline-flex; align-items:center; gap:3px; min-height:36px;
+  padding:0 12px; border-radius:18px; border:1px solid var(--line); font-size:12.5px; font-weight:700; color:var(--sky); background:var(--panel); white-space:nowrap; }
+.navbtn:active{ background:var(--hi-bg); }
+.leg{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft);
+  margin-left:calc(30px + var(--sl)); padding:4px 0 4px 16px; border-left:2px dotted #C9C5B6; min-height:30px; }
+.leg .leg-ic{ font-size:15px; line-height:1; }
+.leg.est .leg-tx::after{ content:"・概算"; color:var(--earth); }
+.items{ margin:6px 0 0 40px; display:flex; flex-direction:column; gap:10px; }
+.item{ display:grid; grid-template-columns:48px minmax(0,1fr); column-gap:10px; padding:3px 0 3px 10px; border-left:3px solid var(--line); border-radius:0 6px 6px 0; }
 .item.t-flight{ border-color:#8E6FB0; }
 .item.t-meal{ border-color:#5C9A63; }
 .item.t-city{ border-color:var(--sky-soft); }
 .item.t-field{ border-color:var(--gold); }
 .item.t-rest{ border-color:#B9B6A9; }
-.item.t-todo{ border-color:var(--alert); background:var(--alert-bg); }
-.item .time{ font-variant-numeric:tabular-nums; font-weight:700; font-size:12.5px; color:var(--sky); }
-.item .act{ font-weight:700; font-size:14px; margin-left:6px; }
-.item .memo{ font-size:12.5px; color:var(--ink-soft); margin-top:3px; }
-.item .status{ font-size:10.5px; padding:1px 6px; border:1px solid var(--line); margin-left:6px; color:var(--ink-soft); }
-.item.t-todo .status{ border-color:var(--alert); color:var(--alert); }
+.item.t-todo{ border-color:var(--alert); }
+.item .time{ font-variant-numeric:tabular-nums; font-weight:700; font-size:15px; color:var(--sky); line-height:1.45; }
+.item .time .end{ display:block; font-weight:400; font-size:11.5px; color:var(--ink-soft); }
+.item .act{ font-weight:700; font-size:15.5px; line-height:1.45; }
+.item .place{ font-size:12.5px; color:var(--ink-soft); margin-top:1px; }
+.tags{ display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+.tag{ font-size:11.5px; font-weight:700; padding:1px 8px; border-radius:10px; white-space:nowrap; }
+.tag.alert{ background:var(--alert-bg); color:var(--alert); }
+.tag.warn{ background:var(--warn-bg); color:var(--warn-ink); }
+.tag.ok{ background:var(--ok-bg); color:var(--ok-ink); }
+.tag.neutral{ background:var(--bg); color:var(--ink-soft); }
+.item .memo{ font-size:13.5px; color:var(--ink-soft); margin-top:4px; line-height:1.65; overflow-wrap:anywhere; }
+.item .memo.clamp{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.memo-more{ all:unset; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--sky); padding:4px 0 2px; min-height:28px; display:inline-flex; align-items:center; }
+.item.past{ opacity:.45; }
+.stop.past .sh-main{ opacity:.45; }
+.item.current{ background:var(--hi-bg); border-left-color:var(--gold) !important; }
+.tl-note{ font-size:12px; color:var(--ink-soft); padding:12px calc(16px + var(--sr)) 4px calc(16px + var(--sl)); }
+
+/* ---- 全体画面：日別カード ---- */
+.daycard{ display:flex; gap:12px; align-items:center; padding:14px calc(14px + var(--sr)) 14px calc(16px + var(--sl)); border-bottom:1px solid var(--line); cursor:pointer; min-height:64px; }
+.daycard:active{ background:var(--hi-bg); }
+.daycard.today{ background:var(--hi-bg); }
+.daycard .dc-bar{ flex:0 0 5px; width:5px; align-self:stretch; border-radius:3px; }
+.daycard .dc-main{ flex:1; min-width:0; }
+.daycard .dc-date{ font-size:12.5px; color:var(--ink-soft); }
+.daycard .dc-date .dc-today{ color:var(--earth); font-weight:700; margin-left:4px; }
+.daycard .dc-title{ font-weight:700; font-size:16px; line-height:1.4; }
+.daycard .dc-hl{ font-size:13px; color:var(--ink-soft); line-height:1.5; }
+.daycard .dc-wx{ flex:0 0 auto; text-align:center; font-size:11.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+.daycard .dc-wx svg{ width:22px; height:22px; display:block; margin:0 auto; }
+.daycard .dc-arrow{ color:var(--ink-soft); font-size:18px; }
 
 .pin{
   width:26px; height:26px; border-radius:50%; background:var(--sky); color:#fff; border:2px solid #fff;
@@ -131,58 +203,33 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 }
 .pin.prec-推定{ background:var(--gold-soft); color:var(--earth); box-shadow:0 0 0 1.5px var(--earth); }
 .pin.prec-未定{ background:#fff; color:var(--alert); box-shadow:0 0 0 1.5px var(--alert); }
-.route-label{ background:var(--panel); border:1px solid var(--line); padding:1px 6px; font-size:10.5px; color:var(--ink-soft); border-radius:2px; }
+.route-label{ background:var(--panel); border:1px solid var(--line); padding:1px 7px; font-size:11px; color:var(--ink-soft); border-radius:10px; white-space:nowrap; }
 
-.ov-legend{ position:absolute; right:8px; top:8px; background:rgba(255,255,255,.94); border:1px solid var(--line); padding:8px 10px; font-size:11px; max-width:150px; z-index:500; max-height:calc(100% - 16px); overflow-y:auto; }
-.ov-legend div{ display:flex; align-items:center; gap:5px; padding:3px 0; cursor:pointer; }
-.ov-legend .sw{ width:12px; height:4px; flex:0 0 12px; }
-
-.wx-panel{
-  position:absolute; left:6px; top:6px; z-index:500; background:rgba(255,255,255,.95);
-  border:1px solid var(--line); padding:5px 8px; font-size:10px; min-width:96px; max-width:140px;
-}
-.wx-row{ display:flex; align-items:center; gap:5px; }
-.wx-row svg{ width:18px; height:18px; }
-.wx-temp{ font-weight:700; font-variant-numeric:tabular-nums; font-size:12.5px; color:var(--ink); white-space:nowrap; }
-.wx-label{ color:var(--ink-soft); font-size:9px; margin-top:2px; line-height:1.3; }
-.wx-loading{ color:var(--ink-soft); font-size:9.5px; }
 .wx-icon-clear,.wx-icon-mclear{ color:var(--gold); }
 .wx-icon-cloudy,.wx-icon-fog{ color:var(--ink-soft); }
 .wx-icon-rain{ color:var(--sky-soft); }
 .wx-icon-snow{ color:#6FA8C9; }
 .wx-icon-storm{ color:#8E6FB0; }
 
-.footnote{ display:none; }
-
-/* ---- iPad・PC など広い画面ではデスクトップ2カラムに切り替え ---- */
+/* ---- iPad・PC など広い画面：左に予定、右に地図を固定する2カラム ---- */
 @media (min-width: 880px){
-  .topbar{ padding:14px 20px; }
-  .topbar h1{ font-size:19px; }
-  .topbar .meta{ display:block; font-size:12px; }
-  .app{ flex-direction:row; } /* 旅程画面（rail+地図/タイムライン）向け。ガイド・マイページは下で縦積みに戻す */
-  #screenGuide, #screenTools{ flex-direction:column; }
-  .rail{ width:104px; flex:0 0 104px; flex-direction:column; overflow-x:visible; overflow-y:auto; }
-  .rail button{ flex-direction:column; padding:12px 8px; min-height:0; border-bottom:1px solid rgba(255,255,255,.14); border-left:none; }
-  .rail button.active{ background:var(--gold); color:var(--sky); border-bottom-color:transparent; }
-  .rail .r-overview{ padding:16px 8px; }
-  .rail .r-overview.active{ background:var(--gold); color:var(--sky); }
-  .headerband{ padding:16px 22px 14px; }
-  .headerband h2{ font-size:22px; }
-  .headerband .highlight{ font-size:13.5px; }
-  .stat-strip{ margin:12px 0 0; padding:0; overflow-x:visible; gap:10px; }
-  .chip{ padding:6px 12px; font-size:12.5px; }
-  .content{ flex-direction:row; }
-  .mapwrap{ flex:1 1 56%; border-right:1px solid var(--line); border-bottom:none; }
-  .timeline{ flex:1 1 44%; padding:6px 0 40px; }
-  .footnote{ display:block; padding:10px 20px 20px; font-size:11px; color:var(--ink-soft); border-top:1px solid var(--line); background:var(--panel); }
+  .appbar .brand{ font-size:20px; }
+  .trip-wrap{ display:grid; grid-template-columns:minmax(380px, 540px) minmax(0, 1fr); align-items:start; }
+  .trip-wrap > .dayhead, .trip-wrap > .nextcard, .trip-wrap > .prep, .trip-wrap > .timeline{ grid-column:1; }
+  .trip-wrap > .mapcol{ grid-column:2; grid-row:1 / span 6; align-self:start; position:sticky; top:var(--stickyh); padding:0;
+    height:calc(100vh - var(--stickyh) - var(--navh)); border-left:1px solid var(--line); }
+  .mapcol .mapwrap, .mapcol .mapwrap.ov{ position:absolute; inset:0; height:auto; border-radius:0; border:0; }
+  .map-tap, .map-hint{ display:none; }
+  .mapwrap:not(.full) .route-label{ display:block; }
+  .mapwrap:not(.full) .maplibregl-ctrl-group{ display:block; }
 }
 
-/* ---- 下部ナビ（旅程／ガイド／旅の道具） ---- */
+/* ---- 下部ナビ（旅程／ガイド／マイページ） ---- */
 .bottomnav{
-  flex:0 0 auto; z-index:900;
+  position:fixed; left:0; right:0; bottom:0; z-index:900;
   height:calc(var(--navh) + env(safe-area-inset-bottom));
-  padding-bottom:env(safe-area-inset-bottom);
-  display:flex; background:var(--panel); border-top:1px solid var(--line);
+  padding:0 var(--sr) env(safe-area-inset-bottom) var(--sl);
+  display:flex; background:rgba(255,255,255,.97); border-top:1px solid var(--line);
 }
 .bottomnav button{
   all:unset; box-sizing:border-box; flex:1 1 0; min-height:44px; height:var(--navh);
@@ -202,11 +249,10 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .searchbox input{ all:unset; flex:1; font-size:15px; font-family:inherit; min-width:0; }
 .searchbox .clearbtn{ all:unset; cursor:pointer; color:var(--ink-soft); font-size:13px; padding:4px; min-width:32px; min-height:32px; text-align:center; }
 
-.guide-layout{ display:flex; flex-direction:column; flex:1; min-height:0; }
-.guide-main-col{ flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; }
-.guide-body{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--panel);
-  padding:8px 0 calc(24px + env(safe-area-inset-bottom));
-  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+.guide-layout{ display:block; }
+.guide-main-col{ min-width:0; }
+.guide-body{ background:var(--panel); min-height:50vh;
+  padding:8px var(--sr) 24px var(--sl); }
 .guide-section-title{ font-family:'Shippori Mincho',serif; font-size:14px; color:var(--earth); padding:16px 16px 6px; }
 .guide-group-title{ font-size:11px; color:var(--ink-soft); letter-spacing:.04em; padding:14px 16px 2px; text-transform:uppercase; }
 .guide-group-title:first-of-type{ padding-top:6px; }
@@ -243,7 +289,7 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .article-topbar button{ all:unset; cursor:pointer; min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; color:var(--sky); font-size:20px; }
 .article-topbar .a-back-label{ flex:1; font-size:12.5px; color:var(--ink-soft); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .article-topbar .a-bookmark{ font-size:20px; color:var(--gold); }
-.article-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+.article-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
   padding:18px 18px calc(32px + env(safe-area-inset-bottom));
   padding-left:calc(18px + env(safe-area-inset-left));
   padding-right:calc(18px + env(safe-area-inset-right));
@@ -291,7 +337,7 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .a-stoplink{ display:inline-flex; align-items:center; gap:6px; margin-top:18px; padding:10px 14px; border:1px solid var(--sky); border-radius:20px; color:var(--sky); cursor:pointer; font-size:13.5px; min-height:44px; }
 
 /* ---- 地点カードのガイド導線 ---- */
-.stop-guide-link{ margin:9px 0 0 38px; }
+.stop-guide-link{ margin:10px 0 0 40px; }
 .stop-guide-btn{ all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--sky);
   border:1px solid var(--sky); border-radius:14px; padding:6px 12px; min-height:36px; }
 .stop-guide-btn:active{ background:var(--sky); color:#fff; }
@@ -320,14 +366,21 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 .checklist-item{ display:flex; align-items:center; gap:10px; padding:9px 0; min-height:44px; cursor:pointer; }
 .checklist-item input{ width:20px; height:20px; flex:0 0 auto; }
 .checklist-item.checked span{ color:var(--ink-soft); text-decoration:line-through; }
+.about dl{ margin:0; display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 14px; font-size:14px; }
+.about dt{ color:var(--ink-soft); white-space:nowrap; }
+.about dd{ margin:0; overflow-wrap:anywhere; }
+.about .about-note{ font-size:12.5px; color:var(--ink-soft); margin:12px 0 0; line-height:1.7; }
+.about .about-note b{ color:var(--earth); }
 
 @media (min-width: 880px){
   /* PC幅でも下部ナビ（旅程／ガイド／旅の道具）は表示し続ける。画面切り替えの唯一の導線のため。 */
   .pctabs{ display:none !important; } /* 下部ナビと機能が重複するため、PCでは重複タブを隠す */
   .pctabs button{ all:unset; cursor:pointer; padding:14px 18px; font-size:13.5px; color:var(--ink-soft); border-bottom:3px solid transparent; min-height:44px; }
   .pctabs button.active{ color:var(--sky); border-bottom-color:var(--gold); font-weight:700; }
-  .guide-layout{ flex-direction:row; }
-  .guide-toc{ width:280px; flex:0 0 280px; border-right:1px solid var(--line); overflow-y:auto; }
+  .guide-layout{ display:flex; flex-direction:row; align-items:flex-start; }
+  .guide-main-col{ flex:1; }
+  .guide-toc{ width:280px; flex:0 0 280px; border-right:1px solid var(--line); overflow-y:auto; background:var(--panel);
+    position:sticky; top:var(--stickyh); max-height:calc(100vh - var(--stickyh) - var(--navh)); }
   .guide-reading{ flex:1; overflow-y:auto; display:flex; justify-content:center; }
   .guide-reading .article-scroll-pc{ max-width:720px; width:100%; padding:32px 32px 60px; }
   .articleView{ position:absolute; }
@@ -335,32 +388,34 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 }
 </style>
 </head>
-<body>
+<body data-screen="trip">
 
-<div class="topbar">
-  <h1>台湾縦断＋沖縄 2026/11/21–12/1</h1>
-  <button class="header-phrase-link" id="headerPhraseLink" type="button">🗣️ <span>会話フレーズ</span></button>
-  <div class="meta">日別ルート叩き台　／　データ元：<b>taiwan_okinawa_schedule_2026_v10.xlsx</b>　／　距離・所要時間はページを開いた時点でオンライン経路計算（<a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a>）により算出。天気は<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>より取得（当日から約15日先まで予報、それより先はまだ取得不可、過去日は提供期間外の場合あり）。通信状況により概算・取得不可表示に切り替わります。</div>
-</div>
-
-<div class="app screen-active" id="screenTrip">
-  <div class="rail" id="rail"></div>
-  <div class="main">
-    <div class="headerband">
-      <h2 id="dayTitle">—</h2>
-      <div class="highlight" id="dayHighlight"></div>
-      <div class="stat-strip" id="statStrip"></div>
-    </div>
-    <div class="content">
-      <div class="mapwrap"><div id="map"></div></div>
-      <div class="timeline" id="timeline"></div>
-    </div>
-    <div class="footnote">
-      座標精度：<b>確定</b>＝施設単位で特定／<b>推定</b>＝地域名までしか分からず代表点を使用（点線の輪郭）／<b>未定</b>＝場所自体が未手配（赤の点線）。
-      距離は徒歩・車の区間はOSRMの実経路（徒歩の時間は時速4.5kmで換算）、鉄道・空路・乗馬等や通信失敗時は直線距離からの概算です。鉄道の所要時間は各予定の発着時刻をご覧ください。あくまで計画段階の目安としてご利用ください。
-    </div>
+<header class="stickyhead" id="stickyHead">
+  <div class="appbar">
+    <h1 class="brand">旅のしおり</h1>
+    <div class="tripname" id="tripName"></div>
+    <button class="header-phrase-link" id="headerPhraseLink" type="button" hidden>🗣️ <span>会話</span></button>
   </div>
-</div>
+  <nav class="daytabs" id="rail" aria-label="日付"></nav>
+  <div class="offline-banner" id="offlineBanner" hidden>オフライン表示中：地図・天気・経路は表示できません</div>
+</header>
+
+<main class="app screen-active" id="screenTrip">
+  <div class="trip-wrap">
+    <section class="dayhead" id="dayHead"></section>
+    <section class="nextcard" id="nextCard" hidden></section>
+    <details class="prep" id="prepBox" hidden></details>
+    <div class="mapcol" id="mapCol">
+      <div class="mapwrap" id="mapWrap">
+        <div id="map"></div>
+        <button class="map-tap" id="mapTap" type="button" aria-label="地図を全画面で開く"></button>
+        <span class="map-hint" aria-hidden="true">タップで地図を拡大</span>
+        <button class="map-close" id="mapClose" type="button">✕ 地図を閉じる</button>
+      </div>
+    </div>
+    <section class="timeline" id="timeline"></section>
+  </div>
+</main>
 
 <div class="app" id="screenGuide">
   <div class="pctabs" id="guidePcTabs" style="display:none;">
@@ -416,28 +471,11 @@ h1,h2,h3,.disp{ font-family:'Shippori Mincho',serif; }
 <script type="application/json" id="guide-data">__NO_GUIDE_DATA__</script>
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
 <script>
-/* ============ -1. 実測ビューポート高さの反映 ============
-   iOSのPWA(ホーム画面追加・standalone)では、起動直後にdvh/visualViewportの確定が
-   遅れて画面全体の高さが実際より大きく計算されることがあり、下部ナビの上に空白が
-   できる（その後、画面切り替え等でレイアウトが強制再計算されると正しい高さに直る）。
-   window.innerHeightを実測して --app-vh に反映し、CSS側でそれを優先させることで、
-   初回描画の時点から正しい高さになるようにする。 */
-function setAppVh() {
-  document.documentElement.style.setProperty('--app-vh', window.innerHeight + 'px');
-}
-setAppVh();
-window.addEventListener('resize', setAppVh);
-window.addEventListener('orientationchange', () => setTimeout(setAppVh, 100));
-window.addEventListener('pageshow', setAppVh); // bfcacheからの復帰時
-document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(setAppVh, 50); });
-if (window.visualViewport) window.visualViewport.addEventListener('resize', setAppVh);
-// iOS PWA起動直後はinnerHeightの初回値が不安定なことがあるため、少し遅らせて再計測する
-setTimeout(setAppVh, 100);
-setTimeout(setAppVh, 400);
-requestAnimationFrame(setAppVh);
-
 /* ============ 0. データ ============ */
-const TRIP = [{"date": "2026/11/21", "dow": "土", "title": "Day1：中津→大分空港→台北（西門）", "highlight": "朝にポラを預け、ソニックと空港バスで大分空港へ。台北は西門のAirbnbに荷物を置き、夜は必比登の牛肉麺", "stops": [{"order": 1, "lat": 33.5985, "lon": 131.1884, "precision": "推定", "name": "中津", "arrive_move": "-", "items": [{"start": "09:30", "end": "10:45", "act": "ポラを中津へ預ける", "place": "中津", "book": "-", "move": "-", "memo": "中津へは車で移動。預け終えるのは10:45まで", "status": "確定", "type": "rest"}, {"start": "10:55", "end": "11:15", "act": "中津駅へ（徒歩約10分）", "place": "中津駅", "book": "-", "move": "徒歩", "memo": "乗車券は大分まで。ICカードも可", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 33.2322, "lon": 131.6067, "precision": "確定", "name": "大分駅", "arrive_move": "鉄道（特急ソニック）", "items": [{"start": "11:15", "end": "12:04", "act": "中津→大分（特急ソニック13号）", "place": "中津駅→大分駅", "book": "-", "move": "鉄道（特急ソニック）", "memo": "11:15発→12:04着（約49分）。予備：11:42発→12:36着", "status": "要確認", "type": "rest"}, {"start": "12:04", "end": "12:32", "act": "バス乗り場へ・昼食を買う", "place": "大分駅（エアライナー乗り場）", "book": "-", "move": "-", "memo": "運賃約1,600円・交通系IC可", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 33.4794, "lon": 131.7372, "precision": "確定", "name": "大分空港", "arrive_move": "バス", "items": [{"start": "12:32", "end": "13:35", "act": "大分駅→大分空港（エアライナー）", "place": "大分駅→大分空港", "book": "-", "move": "バス", "memo": "12:32発または12:35発（土曜・冬ダイヤは公式で要確認）。所要約60〜70分。最終手段はタクシー（約50分・15,000〜20,000円程度）", "status": "要確認", "type": "rest"}, {"start": "13:35", "end": "16:30", "act": "チェックイン・昼食・出国", "place": "大分空港", "book": "-", "move": "-", "memo": "受託15kg/人、機内持込は身の回り品と合わせて10kgまで", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 25.0777, "lon": 121.2328, "precision": "確定", "name": "桃園国際空港", "arrive_move": "飛行機", "items": [{"start": "16:30", "end": "18:10", "act": "✈ 大分→桃園（タイガーエア台湾 IT751）", "place": "大分空港→桃園国際空港 T1", "book": "予約済", "move": "飛行機", "memo": "受託手荷物15kg/人", "status": "確定", "type": "flight"}, {"start": "18:10", "end": "19:15", "act": "入国・SIM/eSIM・両替", "place": "桃園国際空港", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 25.0421, "lon": 121.5083, "precision": "推定", "name": "台北・西門の宿（Airbnb）", "arrive_move": "鉄道（空港MRT直達車＋MRT板南線）", "items": [{"start": "19:15", "end": "20:15", "act": "西門へ・チェックイン", "place": "台北・西門の宿（Airbnb）", "book": "予約済", "move": "鉄道（空港MRT直達車＋MRT板南線）", "memo": "直達車で台北駅まで約35分・NT$160 → MRT板南線で西門駅まで1駅 → 駅から徒歩数分。チェックイン15:00〜（セルフチェックインの方法はAirbnbのメッセージで確認）", "status": "確定", "type": "rest"}]}, {"order": 6, "lat": 25.0477, "lon": 121.5375, "precision": "推定", "name": "林東芳牛肉麵", "arrive_move": "タクシー", "items": [{"start": "20:45", "end": "21:45", "act": "夕食：林東芳牛肉麵（米其林必比登）", "place": "林東芳牛肉麵（八德路二段322號）", "book": "-", "move": "タクシー", "memo": "11:00〜03:00・定休日なし。西門からタクシーで約15〜20分（推測）。辣油（牛油）を少し足すのが店のおすすめ", "status": "案", "type": "meal"}]}, {"order": 7, "lat": 25.0421, "lon": 121.5083, "precision": "推定", "name": "台北・西門の宿（Airbnb）", "arrive_move": "タクシー", "items": [{"start": "22:15", "end": "", "act": "宿泊：台北・西門の宿（Airbnb・1泊）", "place": "台北・西門の宿（Airbnb）", "book": "予約済", "move": "タクシー", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 25.0421, "lon": 121.5083, "place": "台北・西門の宿（Airbnb）"}}, {"date": "2026/11/22", "dow": "日", "title": "Day2：台北→台中", "highlight": "朝は阜杭豆漿の厚餅と鹹豆漿（西門からMRT1本）。台中では第二市場で昼食、歌劇院の曲線建築を体感", "stops": [{"order": 1, "lat": 25.0446, "lon": 121.5249, "precision": "推定", "name": "阜杭豆漿", "arrive_move": "鉄道（MRT板南線）", "items": [{"start": "07:00", "end": "08:30", "act": "朝食：阜杭豆漿（厚餅夾蛋・鹹豆漿）", "place": "阜杭豆漿（華山市場2F）", "book": "-", "move": "鉄道（MRT板南線）", "memo": "西門→善導寺は板南線で乗り換えなし・2駅（約5分）。05:30〜12:30（売切れ次第終了）・月曜定休。週末は行列（30分〜1時間・推測）", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 25.0421, "lon": 121.5083, "precision": "推定", "name": "台北・西門の宿（Airbnb）", "arrive_move": "鉄道（MRT板南線）", "items": [{"start": "08:45", "end": "09:30", "act": "宿に戻ってチェックアウト", "place": "台北・西門の宿（Airbnb）", "book": "-", "move": "鉄道（MRT板南線）", "memo": "チェックアウト11:00まで。退出時に施錠", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 25.0478, "lon": 121.517, "precision": "確定", "name": "台北駅", "arrive_move": "鉄道（MRT板南線）", "items": [{"start": "09:45", "end": "10:15", "act": "台北駅（高鉄）へ", "place": "台北駅", "book": "-", "move": "鉄道（MRT板南線）", "memo": "西門→台北車站は1駅。高鉄は同じ駅の地下", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 24.1122, "lon": 120.6156, "precision": "確定", "name": "高鉄 台中駅", "arrive_move": "鉄道（高鉄）", "items": [{"start": "10:15", "end": "11:15", "act": "高鉄 台北→台中", "place": "高鉄 台北駅→台中駅", "book": "要予約", "move": "鉄道（高鉄）", "memo": "約47分〜1時間。日曜は混むので指定席を事前予約", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "arrive_move": "鉄道（台鉄）＋徒歩", "items": [{"start": "11:30", "end": "12:15", "act": "台中駅へ・ホテルに荷物を預ける", "place": "植光花園酒店（SOF Hotel・光復路52號）", "book": "予約済", "move": "鉄道（台鉄）＋徒歩", "memo": "高鉄台中駅→新烏日→台中駅は台鉄で約10分＋乗換。台中駅から徒歩約10分。チェックインは16:00〜なので荷物だけ先に預ける（可否は要確認）", "status": "案", "type": "rest"}]}, {"order": 6, "lat": 24.1417, "lon": 120.682, "precision": "確定", "name": "台中第二市場", "arrive_move": "徒歩", "items": [{"start": "12:30", "end": "13:45", "act": "昼食：台中第二市場の食べ歩き", "place": "台中第二市場", "book": "-", "move": "徒歩", "memo": "ホテルから徒歩圏（推測）。山河魯肉飯（05:30〜15:00）、顏記肉包（火〜日09:30〜15:00）、老賴紅茶など。月曜は休む店が多いのでこの日に", "status": "案", "type": "meal"}]}, {"order": 7, "lat": 24.1623, "lon": 120.6403, "precision": "確定", "name": "台中国家歌劇院", "arrive_move": "タクシー", "items": [{"start": "14:15", "end": "16:30", "act": "台中国家歌劇院（伊東豊雄設計の曲線建築・空中花園）", "place": "台中国家歌劇院", "book": "-", "move": "タクシー", "memo": "日曜11:30〜21:00。入館無料。ホテル周辺からタクシー約15〜20分（推測）", "status": "案", "type": "city"}]}, {"order": 8, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "arrive_move": "タクシー", "items": [{"start": "16:45", "end": "18:00", "act": "チェックイン・休憩", "place": "植光花園酒店（SOF Hotel）", "book": "予約済", "move": "タクシー", "memo": "ロビーのバーは23時まで無料のコーヒー（紹介記事より）", "status": "確定", "type": "rest"}, {"start": "18:30", "end": "20:00", "act": "夕食：台中の老舗（候補：沁園春＝1949年創業の江浙料理、富貴亭＝燻鵝・当帰鵝肉麺線）", "place": "台中駅周辺", "book": "-", "move": "徒歩", "memo": "いずれも台中駅周辺で必比登掲載歴あり。ホテルから徒歩圏（推測）。営業時間・定休日は要確認", "status": "要確認", "type": "meal"}, {"start": "20:30", "end": "", "act": "宿泊：植光花園酒店（1泊目）", "place": "植光花園酒店（SOF Hotel）", "book": "予約済", "move": "-", "memo": "2泊", "status": "確定", "type": "rest"}]}], "weather": {"lat": 24.1405, "lon": 120.6808, "place": "植光花園酒店（SOF Hotel）"}}, {"date": "2026/11/23", "dow": "月", "title": "Day3：台中（梧棲漁港→高美湿地の夕日）", "highlight": "午前はホテルのすぐ近くの宮原眼科でゆっくり。午後は梧棲漁港で海鮮をつまみ、高美湿地の夕日（17:10）へ", "stops": [{"order": 1, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "arrive_move": "-", "items": [{"start": "08:30", "end": "09:30", "act": "朝食：ホテル周辺（月曜も営業の店）", "place": "植光花園酒店周辺", "book": "-", "move": "-", "memo": "", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 24.1376, "lon": 120.6836, "precision": "確定", "name": "宮原眼科", "arrive_move": "徒歩", "items": [{"start": "10:00", "end": "11:30", "act": "宮原眼科（旧眼科医院を改装したスイーツ店）", "place": "宮原眼科", "book": "-", "move": "徒歩", "memo": "ホテルから徒歩数分（推測）。営業時間は要確認", "status": "案", "type": "city"}]}, {"order": 3, "lat": 24.1383, "lon": 120.6826, "precision": "確定", "name": "第四信用合作社", "arrive_move": "徒歩", "items": [{"start": "11:30", "end": "12:00", "act": "第四信用合作社（アイス）", "place": "第四信用合作社", "book": "-", "move": "徒歩", "memo": "宮原眼科の系列店", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "arrive_move": "徒歩", "items": [{"start": "12:00", "end": "13:30", "act": "昼食・休憩（候補：范記金之園の草袋飯など）", "place": "植光花園酒店周辺", "book": "-", "move": "徒歩", "memo": "月曜の営業は要確認", "status": "要確認", "type": "meal"}]}, {"order": 5, "lat": 24.2924, "lon": 120.5136, "precision": "推定", "name": "梧棲観光漁港", "arrive_move": "タクシー（チャーター）", "items": [{"start": "14:30", "end": "16:00", "act": "梧棲漁港で海鮮をつまみ食い", "place": "梧棲観光漁港", "book": "-", "move": "タクシー（チャーター）", "memo": "ホテル前で乗車。美成香酥海產（月曜11:00〜18:30・火曜定休）、中港烤魷魚（09:00〜20:00）など。高美湿地まで車で約15分（推測）", "status": "案", "type": "meal"}]}, {"order": 6, "lat": 24.3125, "lon": 120.549, "precision": "確定", "name": "高美湿地", "arrive_move": "タクシー（チャーター）", "items": [{"start": "16:15", "end": "18:00", "act": "高美湿地で夕日", "place": "高美湿地", "book": "要手配", "move": "タクシー（チャーター）", "memo": "日没17:10・薄暮17:34（計算値）。水鏡は潮位と風次第。前日に潮汐を確認", "status": "要確認", "type": "field"}]}, {"order": 7, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "arrive_move": "タクシー（チャーター）", "items": [{"start": "19:00", "end": "20:30", "act": "夕食：台中市街（ホテル周辺）", "place": "植光花園酒店周辺", "book": "-", "move": "タクシー（チャーター）", "memo": "チャーターはホテル前で降車", "status": "案", "type": "meal"}, {"start": "21:00", "end": "", "act": "宿泊：植光花園酒店（2泊目）", "place": "植光花園酒店（SOF Hotel）", "book": "予約済", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 24.1405, "lon": 120.6808, "place": "植光花園酒店（SOF Hotel）"}}, {"date": "2026/11/24", "dow": "火", "title": "Day4：台中→台南（古都散策＋阿霞飯店）", "highlight": "宿は赤崁楼と国華街のすぐそば。古跡は歩いて回り、夜は1940年創業の阿霞飯店。食後は神農街の灯り", "stops": [{"order": 1, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "arrive_move": "-", "items": [{"start": "09:00", "end": "09:15", "act": "チェックアウト", "place": "植光花園酒店（SOF Hotel）", "book": "-", "move": "-", "memo": "チェックアウト11:00まで", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 24.1122, "lon": 120.6156, "precision": "確定", "name": "高鉄 台中駅", "arrive_move": "鉄道（台鉄）", "items": [{"start": "09:15", "end": "09:50", "act": "台中駅→高鉄台中駅", "place": "高鉄 台中駅", "book": "-", "move": "鉄道（台鉄）", "memo": "台中駅まで徒歩約10分→台鉄で新烏日（約10分）", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 22.925, "lon": 120.2856, "precision": "確定", "name": "高鉄 台南駅", "arrive_move": "鉄道（高鉄）", "items": [{"start": "10:00", "end": "10:40", "act": "高鉄 台中→台南", "place": "高鉄 台中駅→台南駅", "book": "要予約", "move": "鉄道（高鉄）", "memo": "約38〜40分", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "arrive_move": "鉄道（台鉄沙崙線）＋タクシー", "items": [{"start": "11:15", "end": "12:00", "act": "宿へ・荷物を置く", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "鉄道（台鉄沙崙線）＋タクシー", "memo": "沙崙駅→台南駅は約20〜25分・約30分に1本・NT$25、台南駅から宿までタクシー約10分（推測）。高鉄台南駅から宿まで直接タクシーなら約30分（推測）。チェックインは15:00〜なので、荷物の預け方をホストに事前確認", "status": "要確認", "type": "rest"}, {"start": "12:00", "end": "13:00", "act": "昼食：担仔麺 or 虱目魚粥（国華街周辺の小吃）", "place": "国華街周辺", "book": "-", "move": "徒歩", "memo": "宿のすぐそば。店は現地で選定", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 22.9975, "lon": 120.2025, "precision": "確定", "name": "赤崁楼", "arrive_move": "徒歩", "items": [{"start": "13:00", "end": "14:00", "act": "赤崁楼", "place": "赤崁楼", "book": "-", "move": "徒歩", "memo": "宿から徒歩約5分（推測）", "status": "案", "type": "city"}]}, {"order": 6, "lat": 22.9905, "lon": 120.204, "precision": "確定", "name": "台南孔子廟", "arrive_move": "タクシー", "items": [{"start": "14:15", "end": "15:15", "act": "台南孔子廟・府中街", "place": "台南孔子廟", "book": "-", "move": "タクシー", "memo": "台湾最古の孔子廟。赤崁楼からタクシー約5分／徒歩約20分（推測）", "status": "案", "type": "city"}]}, {"order": 7, "lat": 22.9922, "lon": 120.203, "precision": "確定", "name": "林百貨", "arrive_move": "徒歩", "items": [{"start": "15:15", "end": "16:00", "act": "林百貨（日本統治時代の百貨店・屋上）", "place": "林百貨", "book": "-", "move": "徒歩", "memo": "孔子廟の向かい", "status": "案", "type": "city"}]}, {"order": 8, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "arrive_move": "タクシー", "items": [{"start": "16:15", "end": "17:00", "act": "チェックイン・休憩", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "タクシー", "memo": "林百貨からタクシー約5分（推測）", "status": "確定", "type": "rest"}]}, {"order": 9, "lat": 22.9962, "lon": 120.2038, "precision": "推定", "name": "阿霞飯店", "arrive_move": "徒歩", "items": [{"start": "17:15", "end": "19:00", "act": "夕食：阿霞飯店（紅蟳米糕・烏魚子など）", "place": "阿霞飯店", "book": "要予約", "move": "徒歩", "memo": "宿から徒歩約10分（推測）。11:00〜14:00／17:00〜20:00（資料により21:00まで）・月曜定休。サービス料10%", "status": "要手配", "type": "meal"}]}, {"order": 10, "lat": 22.9973, "lon": 120.1965, "precision": "確定", "name": "神農街", "arrive_move": "徒歩", "items": [{"start": "19:15", "end": "20:45", "act": "神農街の夜散歩（古い街並みの灯り）", "place": "神農街", "book": "-", "move": "徒歩", "memo": "阿霞飯店から徒歩約15分（推測）", "status": "案", "type": "city"}]}, {"order": 11, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "arrive_move": "徒歩", "items": [{"start": "21:00", "end": "", "act": "宿泊：台南・赤崁楼近くの宿（Airbnb）（1泊目）", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "徒歩", "memo": "2泊。神農街から徒歩約10分（推測）", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.9965, "lon": 120.201, "place": "台南・赤崁楼近くの宿（Airbnb）"}}, {"date": "2026/11/25", "dow": "水", "title": "Day5：台南（牛肉湯→小吃→安平の夕日）", "highlight": "朝は牛肉湯、昼は宿の目の前の国華街で小吃はしご。午後は安平の樹屋と夕日（17:14）", "stops": [{"order": 1, "lat": 22.9888, "lon": 120.1985, "precision": "推定", "name": "阿村第二代牛肉湯", "arrive_move": "徒歩", "items": [{"start": "07:00", "end": "08:00", "act": "朝食：阿村第二代牛肉湯", "place": "阿村第二代牛肉湯（保安路41號）", "book": "-", "move": "徒歩", "memo": "宿から徒歩約15分（推測）。水〜土04:00〜12:00／18:00〜21:00・月曜定休。六千牛肉湯は水曜休みのため対象外", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "arrive_move": "徒歩", "items": [{"start": "08:15", "end": "10:00", "act": "宿で休憩", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "-", "move": "徒歩", "memo": "", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 22.9969, "lon": 120.1985, "precision": "推定", "name": "国華街・永楽市場", "arrive_move": "徒歩", "items": [{"start": "10:30", "end": "12:30", "act": "国華街・永楽市場で小吃はしご（昼食）", "place": "国華街・永楽市場", "book": "-", "move": "徒歩", "memo": "宿から徒歩数分。店ごとに営業時間が異なるので現地で選ぶ", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "arrive_move": "徒歩", "items": [{"start": "12:45", "end": "14:00", "act": "休憩", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "-", "move": "徒歩", "memo": "", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 23.0015, "lon": 120.1605, "precision": "確定", "name": "安平古堡", "arrive_move": "タクシー", "items": [{"start": "14:30", "end": "15:15", "act": "安平古堡", "place": "安平古堡", "book": "-", "move": "タクシー", "memo": "宿からタクシー約15分（推測）。台灣好行99（安平台江線）でも可", "status": "案", "type": "city"}]}, {"order": 6, "lat": 23.0035, "lon": 120.159, "precision": "確定", "name": "安平樹屋", "arrive_move": "徒歩", "items": [{"start": "15:15", "end": "16:30", "act": "安平樹屋・安平老街（豆花）", "place": "安平樹屋", "book": "-", "move": "徒歩", "memo": "ガジュマルに呑み込まれた倉庫跡。閉館時刻は要確認", "status": "案", "type": "field"}]}, {"order": 7, "lat": 22.9958, "lon": 120.1532, "precision": "推定", "name": "安平・観夕平台", "arrive_move": "タクシー", "items": [{"start": "16:45", "end": "17:45", "act": "観夕平台で夕日", "place": "安平・観夕平台", "book": "-", "move": "タクシー", "memo": "日没17:14・薄暮17:38（計算値）", "status": "案", "type": "field"}]}, {"order": 8, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "arrive_move": "タクシー", "items": [{"start": "18:30", "end": "20:30", "act": "夕食：牛肉湯の夜営業 or 海鮮（候補：文章牛肉湯 安平店 10:30〜02:00・月曜定休）", "place": "台南", "book": "-", "move": "タクシー", "memo": "", "status": "案", "type": "meal"}, {"start": "21:00", "end": "", "act": "宿泊：台南・赤崁楼近くの宿（Airbnb）（2泊目）", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.9965, "lon": 120.201, "place": "台南・赤崁楼近くの宿（Airbnb）"}}, {"date": "2026/11/26", "dow": "木", "title": "Day6：台南→高雄（鹽埕→蓮池潭→瑞豐夜市）", "highlight": "宿は前金駅のそば。昼は1駅先の鹽埕で鴨肉飯と駁二、チェックインして一息ついてから蓮池潭の夕景と瑞豐夜市", "stops": [{"order": 1, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "arrive_move": "-", "items": [{"start": "08:00", "end": "09:30", "act": "朝食（虱目魚粥など）・チェックアウト", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "-", "move": "-", "memo": "チェックアウト11:00まで", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 22.9972, "lon": 120.2127, "precision": "確定", "name": "台南駅", "arrive_move": "タクシー", "items": [{"start": "09:45", "end": "10:15", "act": "台南駅へ", "place": "台南駅", "book": "-", "move": "タクシー", "memo": "宿からタクシー約10分（推測）", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "arrive_move": "鉄道（台鉄）＋タクシー", "items": [{"start": "10:30", "end": "11:45", "act": "台鉄 台南→高雄・ホテルに荷物を預ける", "place": "福容徠旅 高雄（永恆街3號）", "book": "予約済", "move": "鉄道（台鉄）＋タクシー", "memo": "台鉄で約40分〜1時間（推測）。高雄駅からタクシー約10分（推測）。荷物預かり無料。チェックインは16:00〜", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 22.6237, "lon": 120.2849, "precision": "推定", "name": "鴨肉珍（鹽埕）", "arrive_move": "鉄道（MRT橘線）", "items": [{"start": "12:15", "end": "13:15", "act": "昼食：鴨肉珍（鴨肉飯）", "place": "鴨肉珍（鹽埕）", "book": "-", "move": "鉄道（MRT橘線）", "memo": "前金駅→鹽埕埔駅は1駅。10:00〜20:20・火曜定休", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 22.6197, "lon": 120.2813, "precision": "確定", "name": "駁二芸術特区", "arrive_move": "徒歩", "items": [{"start": "13:30", "end": "15:30", "act": "駁二芸術特区・鹽埕の街歩き", "place": "駁二芸術特区", "book": "-", "move": "徒歩", "memo": "おやつ：北港蔡三代筒仔米糕（13:30〜21:30・水曜定休・必比登）、樺達奶茶（09:00〜22:00）", "status": "案", "type": "city"}]}, {"order": 6, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "arrive_move": "鉄道（MRT橘線）", "items": [{"start": "15:45", "end": "16:30", "act": "ホテルに戻ってチェックイン・一息", "place": "福容徠旅 高雄", "book": "予約済", "move": "鉄道（MRT橘線）", "memo": "鹽埕埔→前金は1駅。チェックイン16:00〜", "status": "確定", "type": "rest"}]}, {"order": 7, "lat": 22.6806, "lon": 120.2971, "precision": "確定", "name": "蓮池潭（龍虎塔）", "arrive_move": "鉄道（MRT）", "items": [{"start": "17:00", "end": "17:45", "act": "蓮池潭の龍虎塔で夕景", "place": "蓮池潭", "book": "-", "move": "鉄道（MRT）", "memo": "前金→美麗島で紅線に乗り換え→左營、タクシー or バスで約10分。日没17:14・薄暮17:38（計算値）なので、着く頃は空が染まる時間（推測）", "status": "案", "type": "field"}]}, {"order": 8, "lat": 22.666, "lon": 120.2999, "precision": "推定", "name": "瑞豐夜市", "arrive_move": "鉄道（MRT紅線）", "items": [{"start": "18:00", "end": "20:00", "act": "夕食：瑞豐夜市", "place": "瑞豐夜市", "book": "-", "move": "鉄道（MRT紅線）", "memo": "火・木〜日営業（月・水は休み）。MRT巨蛋駅から徒歩5〜8分", "status": "案", "type": "meal"}]}, {"order": 9, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "arrive_move": "鉄道（MRT）", "items": [{"start": "20:30", "end": "", "act": "宿泊：福容徠旅 高雄（1泊目）", "place": "福容徠旅 高雄", "book": "予約済", "move": "鉄道（MRT）", "memo": "巨蛋→美麗島で橘線に乗り換え→前金。2泊", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.6312, "lon": 120.2945, "place": "福容徠旅 高雄（Fullon Poshtel）"}}, {"date": "2026/11/27", "dow": "金", "title": "Day7：高雄（佛光山）", "highlight": "朝は興隆居の湯包。日中は佛光山の大仏と八塔、夜はホテル近くで早めに夕食", "stops": [{"order": 1, "lat": 22.6322, "lon": 120.2977, "precision": "推定", "name": "興隆居", "arrive_move": "徒歩", "items": [{"start": "07:00", "end": "08:00", "act": "朝食：興隆居（湯包・焼包）", "place": "興隆居", "book": "-", "move": "徒歩", "memo": "ホテルから徒歩約10〜15分（推測）。04:30〜11:30・月火定休（資料による）", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 22.6875, "lon": 120.3086, "precision": "確定", "name": "左營高鐵駅", "arrive_move": "鉄道（MRT）", "items": [{"start": "08:45", "end": "09:30", "act": "MRTで左營へ・直通バスに乗る", "place": "左營高鐵駅", "book": "-", "move": "鉄道（MRT）", "memo": "美麗島から紅線で左營。佛光山行きの直通バス（哈佛快線／義大客運）。時刻は要確認", "status": "要確認", "type": "rest"}]}, {"order": 3, "lat": 22.757, "lon": 120.438, "precision": "確定", "name": "佛光山佛陀紀念館", "arrive_move": "バス", "items": [{"start": "10:15", "end": "14:30", "act": "佛光山佛陀紀念館", "place": "佛光山佛陀紀念館", "book": "-", "move": "バス", "memo": "金曜は09:00〜18:00（火曜休館）。入場無料。見学の目安は2〜4時間。大仏は高さ108m", "status": "案", "type": "field"}]}, {"order": 4, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "arrive_move": "バス", "items": [{"start": "15:45", "end": "17:30", "act": "高雄へ戻る・休憩", "place": "福容徠旅 高雄", "book": "-", "move": "バス", "memo": "", "status": "案", "type": "rest"}, {"start": "18:00", "end": "19:30", "act": "夕食：ホテル周辺で早めに", "place": "福容徠旅 高雄周辺", "book": "-", "move": "徒歩", "memo": "六合夜市は徒歩約8〜10分（口コミより）。観光色が強いので、前金周辺の食堂でも可。翌朝6時台に出発するため早めに", "status": "案", "type": "meal"}, {"start": "20:00", "end": "", "act": "荷造り・就寝／宿泊：福容徠旅 高雄（2泊目）", "place": "福容徠旅 高雄", "book": "予約済", "move": "-", "memo": "予約書は出発3時間前＝06:45の空港着を推奨", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.6312, "lon": 120.2945, "place": "福容徠旅 高雄（Fullon Poshtel）"}}, {"date": "2026/11/28", "dow": "土", "title": "Day8：高雄→那覇（暮らし初日）", "highlight": "昼に那覇着、ゆいレールで美栄橋へ。19時でスタッフが帰る宿なので先にチェックインし、壺屋を散歩して夜は公設市場の「持ち上げ」", "stops": [{"order": 1, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "arrive_move": "-", "items": [{"start": "06:00", "end": "06:15", "act": "起床・チェックアウト", "place": "福容徠旅 高雄", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 22.5771, "lon": 120.35, "precision": "確定", "name": "高雄国際空港", "arrive_move": "タクシー", "items": [{"start": "06:15", "end": "09:45", "act": "空港へ・チェックイン・出国", "place": "高雄国際空港", "book": "-", "move": "タクシー", "memo": "ホテルから空港は約9.5km・タクシー約20分（推測）。受託20kg/人", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 26.206, "lon": 127.651, "precision": "確定", "name": "那覇空港", "arrive_move": "飛行機", "items": [{"start": "09:45", "end": "12:30", "act": "✈ 高雄→那覇（タイガーエア台湾 IT288）", "place": "高雄国際空港→那覇空港", "book": "予約済", "move": "飛行機", "memo": "受託手荷物20kg/人", "status": "確定", "type": "flight"}, {"start": "12:30", "end": "13:15", "act": "入国・荷物受取", "place": "那覇空港", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "arrive_move": "鉄道（ゆいレール）＋徒歩", "items": [{"start": "13:15", "end": "14:00", "act": "ゆいレールで美栄橋へ・宿に荷物", "place": "スマートコンド泊（那覇市泊2-1-9）", "book": "予約済", "move": "鉄道（ゆいレール）＋徒歩", "memo": "那覇空港→美栄橋 約15分（推測）、美栄橋駅から徒歩約8分。チェックイン15:00〜。荷物の先預けは要確認", "status": "要確認", "type": "rest"}, {"start": "14:00", "end": "15:00", "act": "遅めの昼食：宿の近所の食堂", "place": "泊・前島周辺", "book": "-", "move": "徒歩", "memo": "店は現地で選定", "status": "案", "type": "meal"}, {"start": "15:00", "end": "15:20", "act": "チェックイン", "place": "スマートコンド泊", "book": "予約済", "move": "徒歩", "memo": "19:00以降はスタッフ不在のため、明るいうちに済ませる", "status": "確定", "type": "rest"}]}, {"order": 5, "lat": 26.2122, "lon": 127.6895, "precision": "推定", "name": "壺屋やちむん通り", "arrive_move": "鉄道（ゆいレール）＋徒歩", "items": [{"start": "15:45", "end": "17:15", "act": "壺屋やちむん通り〜浮島通りを散歩（器探し）", "place": "壺屋やちむん通り", "book": "-", "move": "鉄道（ゆいレール）＋徒歩", "memo": "美栄橋→牧志は1駅、牧志駅から徒歩約10分（推測）。日没17:37（計算値）", "status": "案", "type": "city"}]}, {"order": 6, "lat": 26.2144, "lon": 127.687, "precision": "確定", "name": "第一牧志公設市場", "arrive_move": "徒歩", "items": [{"start": "17:30", "end": "19:30", "act": "夕食：第一牧志公設市場の「持ち上げ」", "place": "第一牧志公設市場", "book": "-", "move": "徒歩", "memo": "1階で魚・肉を選び、2階食堂で調理してもらう。調理LO19:45、2階食堂LO20:00。定休は毎月第4日曜（11月は22日）なので営業日", "status": "案", "type": "meal"}]}, {"order": 7, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "arrive_move": "徒歩", "items": [{"start": "20:00", "end": "", "act": "宿泊：スマートコンド泊（1泊目）", "place": "スマートコンド泊", "book": "予約済", "move": "徒歩", "memo": "公設市場から徒歩約15〜20分（推測）。3連泊", "status": "確定", "type": "rest"}]}], "weather": {"lat": 26.2228, "lon": 127.679, "place": "スマートコンド泊"}}, {"date": "2026/11/29", "dow": "日", "title": "Day9：ゆいレールと徒歩でライブの日", "highlight": "車は使わない日。朝は宿から歩いて泊いゆまち（体力次第）、昼は宿で体力温存。ライブ前にジャッキーでステーキ、帰りは栄町で〆", "stops": [{"order": 1, "lat": 26.229, "lon": 127.676, "precision": "推定", "name": "泊いゆまち", "arrive_move": "徒歩", "items": [{"start": "07:30", "end": "09:00", "act": "朝食：泊いゆまちで海鮮（案・当日の体力次第）", "place": "泊いゆまち", "book": "-", "move": "徒歩", "memo": "宿から徒歩約10〜15分（推測）。7:00〜17:00（店舗により異なる）。地元の飲食店も仕入れる市場で、イートインあり。人気の刺身は午前中に売り切れが多い", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "arrive_move": "徒歩", "items": [{"start": "09:30", "end": "14:15", "act": "宿で休憩・近所を散歩（体力温存）", "place": "スマートコンド泊", "book": "-", "move": "徒歩", "memo": "メインはライブなので、日中は無理に予定を入れない。昼は軽めに", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 26.2141, "lon": 127.6738, "precision": "推定", "name": "ジャッキーステーキハウス", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "14:45", "end": "16:10", "act": "早めの夕食：ジャッキーステーキハウス", "place": "ジャッキーステーキハウス（那覇市西1-7-3）", "book": "予約不可（店頭の名簿に記入）", "move": "鉄道（ゆいレール）", "memo": "美栄橋→旭橋は2駅（約4分・推測）＋徒歩約5分。1953年創業、米軍統治時代からの老舗。名物はテンダーロインステーキ。11:00〜22:30頃（最終受付22:00）・水曜定休・現金のみ。昼のピークを過ぎた時間を狙う（空き具合は推測）。待ちが長ければ16:10で切り上げて会場へ（全席指定なので開演18:00に間に合えばよい）", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 26.246, "lon": 127.729, "precision": "推定", "name": "ゆいレール浦添前田駅", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "16:10", "end": "16:40", "act": "旭橋→浦添前田（ゆいレール）", "place": "ゆいレール浦添前田駅", "book": "-", "move": "鉄道（ゆいレール）", "memo": "乗り換えなし・約25分（推測）", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 26.2447, "lon": 127.724, "precision": "推定", "name": "AIM UNIVERSE TEDAKO HALL", "arrive_move": "徒歩", "items": [{"start": "16:40", "end": "20:30", "act": "🎵 カネコアヤノ ライブ（open 17:00／start 18:00）", "place": "AIM UNIVERSE TEDAKO HALL", "book": "チケット取得済（全席指定）", "move": "徒歩", "memo": "浦添前田駅から徒歩約17分。問合せ：PM AGENCY 098-898-1331（平日11:00〜15:00）", "status": "確定", "type": "field"}]}, {"order": 6, "lat": 26.246, "lon": 127.729, "precision": "推定", "name": "ゆいレール浦添前田駅", "arrive_move": "徒歩", "items": [{"start": "20:30", "end": "21:00", "act": "浦添前田駅へ（徒歩約17分）", "place": "ゆいレール浦添前田駅", "book": "-", "move": "徒歩", "memo": "", "status": "案", "type": "rest"}]}, {"order": 7, "lat": 26.2203, "lon": 127.6996, "precision": "推定", "name": "栄町市場", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "21:15", "end": "22:30", "act": "栄町で〆", "place": "栄町市場", "book": "-", "move": "鉄道（ゆいレール）", "memo": "浦添前田→安里 16分。遅い時間は閉まる店もあるので要確認", "status": "案", "type": "meal"}]}, {"order": 8, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "arrive_move": "鉄道（ゆいレール）＋徒歩", "items": [{"start": "22:45", "end": "", "act": "宿泊：スマートコンド泊（2泊目）", "place": "スマートコンド泊", "book": "予約済", "move": "鉄道（ゆいレール）＋徒歩", "memo": "安里→美栄橋は2駅（約4分・推測）＋徒歩約8分。ゆいレールの最終は23時台（要確認）、逃したらタクシーで約10分（推測）", "status": "確定", "type": "rest"}]}], "weather": {"lat": 26.2228, "lon": 127.679, "place": "スマートコンド泊"}}, {"date": "2026/11/30", "dow": "月", "title": "Day10：レンタカーで中部ドライブ", "highlight": "県庁前で車を借りて、海中道路と浜比嘉島の海、コザで元祖タコス、港川外人住宅、北谷・砂辺の夕日とGORDIESのバーガー。帰りは国道58号で県庁前へ", "stops": [{"order": 1, "lat": 26.215, "lon": 127.6793, "precision": "推定", "name": "レンタカー営業所（県庁前・予定）", "arrive_move": "徒歩", "items": [{"start": "08:30", "end": "09:00", "act": "レンタカー受取（県庁前の営業所）", "place": "レンタカー営業所（例：県庁前・パレットくもじ）", "book": "要予約", "move": "徒歩", "memo": "宿から徒歩約12分（推測）／ゆいレールなら美栄橋→県庁前1駅。例：ニッポンレンタカー 県庁前（パレットくもじ内）。営業時間・返却時刻は予約時に確認", "status": "要手配", "type": "todo"}]}, {"order": 2, "lat": 26.333, "lon": 127.917, "precision": "推定", "name": "海中道路・海の駅あやはし館", "arrive_move": "車", "items": [{"start": "09:00", "end": "10:15", "act": "海中道路へ・海の駅あやはし館", "place": "海中道路", "book": "-", "move": "車", "memo": "那覇IC→沖縄北IC（沖縄自動車道）経由で約1時間（推測）。全長約4.7kmの無料道路で、目線の高さに遠浅の海が広がる", "status": "案", "type": "field"}]}, {"order": 3, "lat": 26.3243, "lon": 127.9612, "precision": "推定", "name": "浜比嘉島（シルミチュー）", "arrive_move": "車", "items": [{"start": "10:30", "end": "12:00", "act": "浜比嘉島：シルミチュー・集落を散歩", "place": "浜比嘉島", "book": "-", "move": "車", "memo": "海中道路から車で約15分（推測）。琉球の創世神話の神が住んだとされる島。観光客が少なく静か。時間があれば伊計島まで足を延ばすのも可", "status": "案", "type": "field"}]}, {"order": 4, "lat": 26.3357, "lon": 127.8027, "precision": "推定", "name": "チャーリー多幸寿（コザ）", "arrive_move": "車", "items": [{"start": "12:45", "end": "13:45", "act": "昼食：チャーリー多幸寿（沖縄タコスの元祖）", "place": "チャーリー多幸寿（沖縄市中央4-11-5）", "book": "-", "move": "車", "memo": "1956年創業。11:00〜17:30・木曜定休（11/30は月曜で営業日）。浜比嘉島から約40分（推測）。食後にパークアベニュー〜ゲート通りを少し歩くとコザの街並みも見られる", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 26.2525, "lon": 127.716, "precision": "推定", "name": "港川外人住宅", "arrive_move": "車", "items": [{"start": "14:30", "end": "16:30", "act": "港川外人住宅を散策・カフェ", "place": "港川外人住宅", "book": "-", "move": "車", "memo": "コザから約40分（推測）。米軍関係者向け住宅を改装したカフェ・雑貨店が集まるエリア。月曜休みの店もあるので、目当ての店は事前に確認", "status": "案", "type": "city"}]}, {"order": 6, "lat": 26.327, "lon": 127.752, "precision": "推定", "name": "砂辺馬場公園・宮城海岸", "arrive_move": "車", "items": [{"start": "16:50", "end": "17:45", "act": "砂辺・宮城海岸で夕日（日没17:36・計算値）", "place": "砂辺馬場公園・宮城海岸", "book": "-", "move": "車", "memo": "港川から約20分（推測）。西向きの海岸で、嘉手納基地が近く軍用機が頭上を飛ぶ。北谷のアメリカンビレッジより落ち着いている", "status": "案", "type": "field"}]}, {"order": 7, "lat": 26.3292, "lon": 127.756, "precision": "推定", "name": "GORDIES", "arrive_move": "車（徒歩圏）", "items": [{"start": "17:45", "end": "18:45", "act": "夕食：GORDIES（炭火焼きパティのハンバーガー）", "place": "GORDIES（北谷町砂辺100）", "book": "-", "move": "車（徒歩圏）", "memo": "外人住宅を改装した店。食べログ百名店。営業時間は11:00〜20:00/21:00で情報が分かれる・不定休なので要確認。運転するので酒は無し", "status": "要確認", "type": "meal"}]}, {"order": 8, "lat": 26.215, "lon": 127.6793, "precision": "推定", "name": "レンタカー営業所（県庁前・予定）", "arrive_move": "車", "items": [{"start": "18:45", "end": "19:45", "act": "那覇へ戻りレンタカー返却", "place": "レンタカー営業所（例：県庁前・パレットくもじ）", "book": "-", "move": "車", "memo": "国道58号を南下すればそのまま県庁前に着く。約50分（推測・夕方は渋滞しやすい）。ガソリン満タン返し", "status": "案", "type": "rest"}]}, {"order": 9, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "arrive_move": "徒歩", "items": [{"start": "20:00", "end": "", "act": "宿泊：スマートコンド泊（3泊目）", "place": "スマートコンド泊", "book": "予約済", "move": "徒歩", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 26.2228, "lon": 127.679, "place": "スマートコンド泊"}}, {"date": "2026/12/1", "dow": "火", "title": "Day11：那覇→福岡→中津", "highlight": "空港のA&Wでルートビアの飲み納め。福岡からソニックで中津に戻り、ポラを受け取って帰宅", "stops": [{"order": 1, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "arrive_move": "-", "items": [{"start": "09:15", "end": "09:30", "act": "チェックアウト", "place": "スマートコンド泊", "book": "-", "move": "-", "memo": "チェックアウトは10:00まで（じゃらん掲載の施設情報。プランにより異なる場合あり）", "status": "要確認", "type": "rest"}]}, {"order": 2, "lat": 26.206, "lon": 127.651, "precision": "確定", "name": "那覇空港", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "09:30", "end": "10:15", "act": "ゆいレールで空港へ・チェックイン", "place": "那覇空港", "book": "-", "move": "鉄道（ゆいレール）", "memo": "美栄橋駅まで徒歩約8分、美栄橋→那覇空港 約15分（推測）", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 26.2068, "lon": 127.6503, "precision": "推定", "name": "A&W 那覇空港店", "arrive_move": "徒歩", "items": [{"start": "10:15", "end": "11:00", "act": "A&W 那覇空港店でルートビアとバーガー", "place": "A&W 那覇空港店（国内線ターミナル3F）", "book": "-", "move": "徒歩", "memo": "日本では沖縄にしかないチェーン。7:00〜20:00・無休。混んでいたらテイクアウトに切り替え。保安検査は出発20分前（11:20）まで", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 33.5859, "lon": 130.4507, "precision": "確定", "name": "福岡空港", "arrive_move": "飛行機", "items": [{"start": "11:40", "end": "13:20", "act": "✈ 那覇→福岡（JTA052）", "place": "那覇空港→福岡空港", "book": "予約済", "move": "飛行機", "memo": "", "status": "確定", "type": "flight"}]}, {"order": 5, "lat": 33.5985, "lon": 131.1884, "precision": "推定", "name": "中津", "arrive_move": "鉄道（特急ソニック＋地下鉄）", "items": [{"start": "14:00", "end": "15:50", "act": "福岡空港→博多→中津（特急ソニック）", "place": "福岡空港→博多駅→中津駅", "book": "-", "move": "鉄道（特急ソニック＋地下鉄）", "memo": "博多14:30前後発の想定（推測）。実際の時刻は要確認", "status": "要確認", "type": "rest"}, {"start": "16:00", "end": "17:00", "act": "ポラを受け取って帰宅", "place": "中津", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}, {"start": "17:00", "end": "", "act": "帰宅（車）", "place": "帰宅", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}], "weather": {"lat": 33.5985, "lon": 131.1884, "place": "中津"}}];
+const TRIP = [{"date": "2026/11/21", "dow": "土", "title": "Day1：中津→大分空港→台北（西門）", "highlight": "朝にポラを預け、ソニックと空港バスで大分空港へ。台北は西門のAirbnbに荷物を置き、夜は必比登の牛肉麺", "stops": [{"order": 1, "lat": 33.5985, "lon": 131.1884, "precision": "推定", "name": "中津", "nav": "中津駅", "arrive_move": "-", "items": [{"start": "09:30", "end": "10:45", "act": "ポラを中津へ預ける", "place": "中津", "book": "-", "move": "-", "memo": "中津へは車で移動。預け終えるのは10:45まで", "status": "確定", "type": "rest"}, {"start": "10:55", "end": "11:15", "act": "中津駅へ（徒歩約10分）", "place": "中津駅", "book": "-", "move": "徒歩", "memo": "乗車券は大分まで。ICカードも可", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 33.2322, "lon": 131.6067, "precision": "確定", "name": "大分駅", "nav": "大分駅 大分市", "arrive_move": "鉄道（特急ソニック）", "items": [{"start": "11:15", "end": "12:04", "act": "中津→大分（特急ソニック13号）", "place": "中津駅→大分駅", "book": "-", "move": "鉄道（特急ソニック）", "memo": "11:15発→12:04着（約49分）。予備：11:42発→12:36着", "status": "要確認", "type": "rest"}, {"start": "12:04", "end": "12:32", "act": "バス乗り場へ・昼食を買う", "place": "大分駅（エアライナー乗り場）", "book": "-", "move": "-", "memo": "運賃約1,600円・交通系IC可", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 33.4794, "lon": 131.7372, "precision": "確定", "name": "大分空港", "nav": "大分空港 大分市", "arrive_move": "バス", "items": [{"start": "12:32", "end": "13:35", "act": "大分駅→大分空港（エアライナー）", "place": "大分駅→大分空港", "book": "-", "move": "バス", "memo": "12:32発または12:35発（土曜・冬ダイヤは公式で要確認）。所要約60〜70分。最終手段はタクシー（約50分・15,000〜20,000円程度）", "status": "要確認", "type": "rest"}, {"start": "13:35", "end": "16:30", "act": "チェックイン・昼食・出国", "place": "大分空港", "book": "-", "move": "-", "memo": "受託15kg/人、機内持込は身の回り品と合わせて10kgまで", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 25.0777, "lon": 121.2328, "precision": "確定", "name": "桃園国際空港", "nav": "桃園国際空港", "arrive_move": "飛行機", "items": [{"start": "16:30", "end": "18:10", "act": "✈ 大分→桃園（タイガーエア台湾 IT751）", "place": "大分空港→桃園国際空港 T1", "book": "予約済", "move": "飛行機", "memo": "受託手荷物15kg/人", "status": "確定", "type": "flight"}, {"start": "18:10", "end": "19:15", "act": "入国・SIM/eSIM・両替", "place": "桃園国際空港", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 25.0421, "lon": 121.5083, "precision": "推定", "name": "台北・西門の宿（Airbnb）", "nav": "", "arrive_move": "鉄道（空港MRT直達車＋MRT板南線）", "items": [{"start": "19:15", "end": "20:15", "act": "西門へ・チェックイン", "place": "台北・西門の宿（Airbnb）", "book": "予約済", "move": "鉄道（空港MRT直達車＋MRT板南線）", "memo": "直達車で台北駅まで約35分・NT$160 → MRT板南線で西門駅まで1駅 → 駅から徒歩数分。チェックイン15:00〜（セルフチェックインの方法はAirbnbのメッセージで確認）", "status": "確定", "type": "rest"}]}, {"order": 6, "lat": 25.0477, "lon": 121.5375, "precision": "推定", "name": "林東芳牛肉麵", "nav": "林東芳牛肉麵 台北", "arrive_move": "タクシー", "items": [{"start": "20:45", "end": "21:45", "act": "夕食：林東芳牛肉麵（米其林必比登）", "place": "林東芳牛肉麵（八德路二段322號）", "book": "-", "move": "タクシー", "memo": "11:00〜03:00・定休日なし。西門からタクシーで約15〜20分（推測）。辣油（牛油）を少し足すのが店のおすすめ", "status": "案", "type": "meal"}]}, {"order": 7, "lat": 25.0421, "lon": 121.5083, "precision": "推定", "name": "台北・西門の宿（Airbnb）", "nav": "", "arrive_move": "タクシー", "items": [{"start": "22:15", "end": "", "act": "宿泊：台北・西門の宿（Airbnb・1泊）", "place": "台北・西門の宿（Airbnb）", "book": "予約済", "move": "タクシー", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 25.0421, "lon": 121.5083, "place": "台北・西門の宿（Airbnb）"}}, {"date": "2026/11/22", "dow": "日", "title": "Day2：台北→台中", "highlight": "朝は阜杭豆漿の厚餅と鹹豆漿（西門からMRT1本）。台中では第二市場で昼食、歌劇院の曲線建築を体感", "stops": [{"order": 1, "lat": 25.0446, "lon": 121.5249, "precision": "推定", "name": "阜杭豆漿", "nav": "阜杭豆漿 台北", "arrive_move": "鉄道（MRT板南線）", "items": [{"start": "07:00", "end": "08:30", "act": "朝食：阜杭豆漿（厚餅夾蛋・鹹豆漿）", "place": "阜杭豆漿（華山市場2F）", "book": "-", "move": "鉄道（MRT板南線）", "memo": "西門→善導寺は板南線で乗り換えなし・2駅（約5分）。05:30〜12:30（売切れ次第終了）・月曜定休。週末は行列（30分〜1時間・推測）", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 25.0421, "lon": 121.5083, "precision": "推定", "name": "台北・西門の宿（Airbnb）", "nav": "", "arrive_move": "鉄道（MRT板南線）", "items": [{"start": "08:45", "end": "09:30", "act": "宿に戻ってチェックアウト", "place": "台北・西門の宿（Airbnb）", "book": "-", "move": "鉄道（MRT板南線）", "memo": "チェックアウト11:00まで。退出時に施錠", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 25.0478, "lon": 121.517, "precision": "確定", "name": "台北駅", "nav": "台北駅", "arrive_move": "鉄道（MRT板南線）", "items": [{"start": "09:45", "end": "10:15", "act": "台北駅（高鉄）へ", "place": "台北駅", "book": "-", "move": "鉄道（MRT板南線）", "memo": "西門→台北車站は1駅。高鉄は同じ駅の地下", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 24.1122, "lon": 120.6156, "precision": "確定", "name": "高鉄 台中駅", "nav": "高鉄 台中駅", "arrive_move": "鉄道（高鉄）", "items": [{"start": "10:15", "end": "11:15", "act": "高鉄 台北→台中", "place": "高鉄 台北駅→台中駅", "book": "要予約", "move": "鉄道（高鉄）", "memo": "約47分〜1時間。日曜は混むので指定席を事前予約", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "nav": "植光花園酒店 台中", "arrive_move": "鉄道（台鉄）＋徒歩", "items": [{"start": "11:30", "end": "12:15", "act": "台中駅へ・ホテルに荷物を預ける", "place": "植光花園酒店（SOF Hotel・光復路52號）", "book": "予約済", "move": "鉄道（台鉄）＋徒歩", "memo": "高鉄台中駅→新烏日→台中駅は台鉄で約10分＋乗換。台中駅から徒歩約10分。チェックインは16:00〜なので荷物だけ先に預ける（可否は要確認）", "status": "案", "type": "rest"}]}, {"order": 6, "lat": 24.1417, "lon": 120.682, "precision": "確定", "name": "台中第二市場", "nav": "台中第二市場", "arrive_move": "徒歩", "items": [{"start": "12:30", "end": "13:45", "act": "昼食：台中第二市場の食べ歩き", "place": "台中第二市場", "book": "-", "move": "徒歩", "memo": "ホテルから徒歩圏（推測）。山河魯肉飯（05:30〜15:00）、顏記肉包（火〜日09:30〜15:00）、老賴紅茶など。月曜は休む店が多いのでこの日に", "status": "案", "type": "meal"}]}, {"order": 7, "lat": 24.1623, "lon": 120.6403, "precision": "確定", "name": "台中国家歌劇院", "nav": "台中国家歌劇院", "arrive_move": "タクシー", "items": [{"start": "14:15", "end": "16:30", "act": "台中国家歌劇院（伊東豊雄設計の曲線建築・空中花園）", "place": "台中国家歌劇院", "book": "-", "move": "タクシー", "memo": "日曜11:30〜21:00。入館無料。ホテル周辺からタクシー約15〜20分（推測）", "status": "案", "type": "city"}]}, {"order": 8, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "nav": "植光花園酒店 台中", "arrive_move": "タクシー", "items": [{"start": "16:45", "end": "18:00", "act": "チェックイン・休憩", "place": "植光花園酒店（SOF Hotel）", "book": "予約済", "move": "タクシー", "memo": "ロビーのバーは23時まで無料のコーヒー（紹介記事より）", "status": "確定", "type": "rest"}, {"start": "18:30", "end": "20:00", "act": "夕食：台中の老舗（候補：沁園春＝1949年創業の江浙料理、富貴亭＝燻鵝・当帰鵝肉麺線）", "place": "台中駅周辺", "book": "-", "move": "徒歩", "memo": "いずれも台中駅周辺で必比登掲載歴あり。ホテルから徒歩圏（推測）。営業時間・定休日は要確認", "status": "要確認", "type": "meal"}, {"start": "20:30", "end": "", "act": "宿泊：植光花園酒店（1泊目）", "place": "植光花園酒店（SOF Hotel）", "book": "予約済", "move": "-", "memo": "2泊", "status": "確定", "type": "rest"}]}], "weather": {"lat": 24.1405, "lon": 120.6808, "place": "植光花園酒店（SOF Hotel）"}}, {"date": "2026/11/23", "dow": "月", "title": "Day3：台中（梧棲漁港→高美湿地の夕日）", "highlight": "午前はホテルのすぐ近くの宮原眼科でゆっくり。午後は梧棲漁港で海鮮をつまみ、高美湿地の夕日（17:10）へ", "stops": [{"order": 1, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "nav": "植光花園酒店 台中", "arrive_move": "-", "items": [{"start": "08:30", "end": "09:30", "act": "朝食：ホテル周辺（月曜も営業の店）", "place": "植光花園酒店周辺", "book": "-", "move": "-", "memo": "", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 24.1376, "lon": 120.6836, "precision": "確定", "name": "宮原眼科", "nav": "宮原眼科 台中", "arrive_move": "徒歩", "items": [{"start": "10:00", "end": "11:30", "act": "宮原眼科（旧眼科医院を改装したスイーツ店）", "place": "宮原眼科", "book": "-", "move": "徒歩", "memo": "ホテルから徒歩数分（推測）。営業時間は要確認", "status": "案", "type": "city"}]}, {"order": 3, "lat": 24.1383, "lon": 120.6826, "precision": "確定", "name": "第四信用合作社", "nav": "第四信用合作社 台中", "arrive_move": "徒歩", "items": [{"start": "11:30", "end": "12:00", "act": "第四信用合作社（アイス）", "place": "第四信用合作社", "book": "-", "move": "徒歩", "memo": "宮原眼科の系列店", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "nav": "植光花園酒店 台中", "arrive_move": "徒歩", "items": [{"start": "12:00", "end": "13:30", "act": "昼食・休憩（候補：范記金之園の草袋飯など）", "place": "植光花園酒店周辺", "book": "-", "move": "徒歩", "memo": "月曜の営業は要確認", "status": "要確認", "type": "meal"}]}, {"order": 5, "lat": 24.2924, "lon": 120.5136, "precision": "推定", "name": "梧棲観光漁港", "nav": "梧棲観光漁港 台中", "arrive_move": "タクシー（チャーター）", "items": [{"start": "14:30", "end": "16:00", "act": "梧棲漁港で海鮮をつまみ食い", "place": "梧棲観光漁港", "book": "-", "move": "タクシー（チャーター）", "memo": "ホテル前で乗車。美成香酥海產（月曜11:00〜18:30・火曜定休）、中港烤魷魚（09:00〜20:00）など。高美湿地まで車で約15分（推測）", "status": "案", "type": "meal"}]}, {"order": 6, "lat": 24.3125, "lon": 120.549, "precision": "確定", "name": "高美湿地", "nav": "高美湿地 台中", "arrive_move": "タクシー（チャーター）", "items": [{"start": "16:15", "end": "18:00", "act": "高美湿地で夕日", "place": "高美湿地", "book": "要手配", "move": "タクシー（チャーター）", "memo": "日没17:10・薄暮17:34（計算値）。水鏡は潮位と風次第。前日に潮汐を確認", "status": "要確認", "type": "field"}]}, {"order": 7, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "nav": "植光花園酒店 台中", "arrive_move": "タクシー（チャーター）", "items": [{"start": "19:00", "end": "20:30", "act": "夕食：台中市街（ホテル周辺）", "place": "植光花園酒店周辺", "book": "-", "move": "タクシー（チャーター）", "memo": "チャーターはホテル前で降車", "status": "案", "type": "meal"}, {"start": "21:00", "end": "", "act": "宿泊：植光花園酒店（2泊目）", "place": "植光花園酒店（SOF Hotel）", "book": "予約済", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 24.1405, "lon": 120.6808, "place": "植光花園酒店（SOF Hotel）"}}, {"date": "2026/11/24", "dow": "火", "title": "Day4：台中→台南（古都散策＋阿霞飯店）", "highlight": "宿は赤崁楼と国華街のすぐそば。古跡は歩いて回り、夜は1940年創業の阿霞飯店。食後は神農街の灯り", "stops": [{"order": 1, "lat": 24.1405, "lon": 120.6808, "precision": "推定", "name": "植光花園酒店（SOF Hotel）", "nav": "植光花園酒店 台中", "arrive_move": "-", "items": [{"start": "09:00", "end": "09:15", "act": "チェックアウト", "place": "植光花園酒店（SOF Hotel）", "book": "-", "move": "-", "memo": "チェックアウト11:00まで", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 24.1122, "lon": 120.6156, "precision": "確定", "name": "高鉄 台中駅", "nav": "高鉄 台中駅", "arrive_move": "鉄道（台鉄）", "items": [{"start": "09:15", "end": "09:50", "act": "台中駅→高鉄台中駅", "place": "高鉄 台中駅", "book": "-", "move": "鉄道（台鉄）", "memo": "台中駅まで徒歩約10分→台鉄で新烏日（約10分）", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 22.925, "lon": 120.2856, "precision": "確定", "name": "高鉄 台南駅", "nav": "高鉄 台南駅", "arrive_move": "鉄道（高鉄）", "items": [{"start": "10:00", "end": "10:40", "act": "高鉄 台中→台南", "place": "高鉄 台中駅→台南駅", "book": "要予約", "move": "鉄道（高鉄）", "memo": "約38〜40分", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "nav": "", "arrive_move": "鉄道（台鉄沙崙線）＋タクシー", "items": [{"start": "11:15", "end": "12:00", "act": "宿へ・荷物を置く", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "鉄道（台鉄沙崙線）＋タクシー", "memo": "沙崙駅→台南駅は約20〜25分・約30分に1本・NT$25、台南駅から宿までタクシー約10分（推測）。高鉄台南駅から宿まで直接タクシーなら約30分（推測）。チェックインは15:00〜なので、荷物の預け方をホストに事前確認", "status": "要確認", "type": "rest"}, {"start": "12:00", "end": "13:00", "act": "昼食：担仔麺 or 虱目魚粥（国華街周辺の小吃）", "place": "国華街周辺", "book": "-", "move": "徒歩", "memo": "宿のすぐそば。店は現地で選定", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 22.9975, "lon": 120.2025, "precision": "確定", "name": "赤崁楼", "nav": "赤崁楼 台南", "arrive_move": "徒歩", "items": [{"start": "13:00", "end": "14:00", "act": "赤崁楼", "place": "赤崁楼", "book": "-", "move": "徒歩", "memo": "宿から徒歩約5分（推測）", "status": "案", "type": "city"}]}, {"order": 6, "lat": 22.9905, "lon": 120.204, "precision": "確定", "name": "台南孔子廟", "nav": "台南孔子廟", "arrive_move": "タクシー", "items": [{"start": "14:15", "end": "15:15", "act": "台南孔子廟・府中街", "place": "台南孔子廟", "book": "-", "move": "タクシー", "memo": "台湾最古の孔子廟。赤崁楼からタクシー約5分／徒歩約20分（推測）", "status": "案", "type": "city"}]}, {"order": 7, "lat": 22.9922, "lon": 120.203, "precision": "確定", "name": "林百貨", "nav": "林百貨 台南", "arrive_move": "徒歩", "items": [{"start": "15:15", "end": "16:00", "act": "林百貨（日本統治時代の百貨店・屋上）", "place": "林百貨", "book": "-", "move": "徒歩", "memo": "孔子廟の向かい", "status": "案", "type": "city"}]}, {"order": 8, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "nav": "", "arrive_move": "タクシー", "items": [{"start": "16:15", "end": "17:00", "act": "チェックイン・休憩", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "タクシー", "memo": "林百貨からタクシー約5分（推測）", "status": "確定", "type": "rest"}]}, {"order": 9, "lat": 22.9962, "lon": 120.2038, "precision": "推定", "name": "阿霞飯店", "nav": "阿霞飯店 台南", "arrive_move": "徒歩", "items": [{"start": "17:15", "end": "19:00", "act": "夕食：阿霞飯店（紅蟳米糕・烏魚子など）", "place": "阿霞飯店", "book": "要予約", "move": "徒歩", "memo": "宿から徒歩約10分（推測）。11:00〜14:00／17:00〜20:00（資料により21:00まで）・月曜定休。サービス料10%", "status": "要手配", "type": "meal"}]}, {"order": 10, "lat": 22.9973, "lon": 120.1965, "precision": "確定", "name": "神農街", "nav": "神農街 台南", "arrive_move": "徒歩", "items": [{"start": "19:15", "end": "20:45", "act": "神農街の夜散歩（古い街並みの灯り）", "place": "神農街", "book": "-", "move": "徒歩", "memo": "阿霞飯店から徒歩約15分（推測）", "status": "案", "type": "city"}]}, {"order": 11, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "nav": "", "arrive_move": "徒歩", "items": [{"start": "21:00", "end": "", "act": "宿泊：台南・赤崁楼近くの宿（Airbnb）（1泊目）", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "徒歩", "memo": "2泊。神農街から徒歩約10分（推測）", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.9965, "lon": 120.201, "place": "台南・赤崁楼近くの宿（Airbnb）"}}, {"date": "2026/11/25", "dow": "水", "title": "Day5：台南（牛肉湯→小吃→安平の夕日）", "highlight": "朝は牛肉湯、昼は宿の目の前の国華街で小吃はしご。午後は安平の樹屋と夕日（17:14）", "stops": [{"order": 1, "lat": 22.9888, "lon": 120.1985, "precision": "推定", "name": "阿村第二代牛肉湯", "nav": "阿村第二代牛肉湯 台南", "arrive_move": "徒歩", "items": [{"start": "07:00", "end": "08:00", "act": "朝食：阿村第二代牛肉湯", "place": "阿村第二代牛肉湯（保安路41號）", "book": "-", "move": "徒歩", "memo": "宿から徒歩約15分（推測）。水〜土04:00〜12:00／18:00〜21:00・月曜定休。六千牛肉湯は水曜休みのため対象外", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "nav": "", "arrive_move": "徒歩", "items": [{"start": "08:15", "end": "10:00", "act": "宿で休憩", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "-", "move": "徒歩", "memo": "", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 22.9969, "lon": 120.1985, "precision": "推定", "name": "国華街・永楽市場", "nav": "永樂市場 台南", "arrive_move": "徒歩", "items": [{"start": "10:30", "end": "12:30", "act": "国華街・永楽市場で小吃はしご（昼食）", "place": "国華街・永楽市場", "book": "-", "move": "徒歩", "memo": "宿から徒歩数分。店ごとに営業時間が異なるので現地で選ぶ", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "nav": "", "arrive_move": "徒歩", "items": [{"start": "12:45", "end": "14:00", "act": "休憩", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "-", "move": "徒歩", "memo": "", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 23.0015, "lon": 120.1605, "precision": "確定", "name": "安平古堡", "nav": "安平古堡 台南", "arrive_move": "タクシー", "items": [{"start": "14:30", "end": "15:15", "act": "安平古堡", "place": "安平古堡", "book": "-", "move": "タクシー", "memo": "宿からタクシー約15分（推測）。台灣好行99（安平台江線）でも可", "status": "案", "type": "city"}]}, {"order": 6, "lat": 23.0035, "lon": 120.159, "precision": "確定", "name": "安平樹屋", "nav": "安平樹屋 台南", "arrive_move": "徒歩", "items": [{"start": "15:15", "end": "16:30", "act": "安平樹屋・安平老街（豆花）", "place": "安平樹屋", "book": "-", "move": "徒歩", "memo": "ガジュマルに呑み込まれた倉庫跡。閉館時刻は要確認", "status": "案", "type": "field"}]}, {"order": 7, "lat": 22.9958, "lon": 120.1532, "precision": "推定", "name": "安平・観夕平台", "nav": "觀夕平台 安平 台南", "arrive_move": "タクシー", "items": [{"start": "16:45", "end": "17:45", "act": "観夕平台で夕日", "place": "安平・観夕平台", "book": "-", "move": "タクシー", "memo": "日没17:14・薄暮17:38（計算値）", "status": "案", "type": "field"}]}, {"order": 8, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "nav": "", "arrive_move": "タクシー", "items": [{"start": "18:30", "end": "20:30", "act": "夕食：牛肉湯の夜営業 or 海鮮（候補：文章牛肉湯 安平店 10:30〜02:00・月曜定休）", "place": "台南", "book": "-", "move": "タクシー", "memo": "", "status": "案", "type": "meal"}, {"start": "21:00", "end": "", "act": "宿泊：台南・赤崁楼近くの宿（Airbnb）（2泊目）", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "予約済", "move": "-", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.9965, "lon": 120.201, "place": "台南・赤崁楼近くの宿（Airbnb）"}}, {"date": "2026/11/26", "dow": "木", "title": "Day6：台南→高雄（鹽埕→蓮池潭→瑞豐夜市）", "highlight": "宿は前金駅のそば。昼は1駅先の鹽埕で鴨肉飯と駁二、チェックインして一息ついてから蓮池潭の夕景と瑞豐夜市", "stops": [{"order": 1, "lat": 22.9965, "lon": 120.201, "precision": "推定", "name": "台南・赤崁楼近くの宿（Airbnb）", "nav": "", "arrive_move": "-", "items": [{"start": "08:00", "end": "09:30", "act": "朝食（虱目魚粥など）・チェックアウト", "place": "台南・赤崁楼近くの宿（Airbnb）", "book": "-", "move": "-", "memo": "チェックアウト11:00まで", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 22.9972, "lon": 120.2127, "precision": "確定", "name": "台南駅", "nav": "台南駅", "arrive_move": "タクシー", "items": [{"start": "09:45", "end": "10:15", "act": "台南駅へ", "place": "台南駅", "book": "-", "move": "タクシー", "memo": "宿からタクシー約10分（推測）", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "nav": "福容徠旅 高雄", "arrive_move": "鉄道（台鉄）＋タクシー", "items": [{"start": "10:30", "end": "11:45", "act": "台鉄 台南→高雄・ホテルに荷物を預ける", "place": "福容徠旅 高雄（永恆街3號）", "book": "予約済", "move": "鉄道（台鉄）＋タクシー", "memo": "台鉄で約40分〜1時間（推測）。高雄駅からタクシー約10分（推測）。荷物預かり無料。チェックインは16:00〜", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 22.6237, "lon": 120.2849, "precision": "推定", "name": "鴨肉珍（鹽埕）", "nav": "鴨肉珍 高雄", "arrive_move": "鉄道（MRT橘線）", "items": [{"start": "12:15", "end": "13:15", "act": "昼食：鴨肉珍（鴨肉飯）", "place": "鴨肉珍（鹽埕）", "book": "-", "move": "鉄道（MRT橘線）", "memo": "前金駅→鹽埕埔駅は1駅。10:00〜20:20・火曜定休", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 22.6197, "lon": 120.2813, "precision": "確定", "name": "駁二芸術特区", "nav": "駁二芸術特区 高雄", "arrive_move": "徒歩", "items": [{"start": "13:30", "end": "15:30", "act": "駁二芸術特区・鹽埕の街歩き", "place": "駁二芸術特区", "book": "-", "move": "徒歩", "memo": "おやつ：北港蔡三代筒仔米糕（13:30〜21:30・水曜定休・必比登）、樺達奶茶（09:00〜22:00）", "status": "案", "type": "city"}]}, {"order": 6, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "nav": "福容徠旅 高雄", "arrive_move": "鉄道（MRT橘線）", "items": [{"start": "15:45", "end": "16:30", "act": "ホテルに戻ってチェックイン・一息", "place": "福容徠旅 高雄", "book": "予約済", "move": "鉄道（MRT橘線）", "memo": "鹽埕埔→前金は1駅。チェックイン16:00〜", "status": "確定", "type": "rest"}]}, {"order": 7, "lat": 22.6806, "lon": 120.2971, "precision": "確定", "name": "蓮池潭（龍虎塔）", "nav": "蓮池潭 高雄", "arrive_move": "鉄道（MRT）", "items": [{"start": "17:00", "end": "17:45", "act": "蓮池潭の龍虎塔で夕景", "place": "蓮池潭", "book": "-", "move": "鉄道（MRT）", "memo": "前金→美麗島で紅線に乗り換え→左營、タクシー or バスで約10分。日没17:14・薄暮17:38（計算値）なので、着く頃は空が染まる時間（推測）", "status": "案", "type": "field"}]}, {"order": 8, "lat": 22.666, "lon": 120.2999, "precision": "推定", "name": "瑞豐夜市", "nav": "瑞豐夜市 高雄", "arrive_move": "鉄道（MRT紅線）", "items": [{"start": "18:00", "end": "20:00", "act": "夕食：瑞豐夜市", "place": "瑞豐夜市", "book": "-", "move": "鉄道（MRT紅線）", "memo": "火・木〜日営業（月・水は休み）。MRT巨蛋駅から徒歩5〜8分", "status": "案", "type": "meal"}]}, {"order": 9, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "nav": "福容徠旅 高雄", "arrive_move": "鉄道（MRT）", "items": [{"start": "20:30", "end": "", "act": "宿泊：福容徠旅 高雄（1泊目）", "place": "福容徠旅 高雄", "book": "予約済", "move": "鉄道（MRT）", "memo": "巨蛋→美麗島で橘線に乗り換え→前金。2泊", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.6312, "lon": 120.2945, "place": "福容徠旅 高雄（Fullon Poshtel）"}}, {"date": "2026/11/27", "dow": "金", "title": "Day7：高雄（佛光山）", "highlight": "朝は興隆居の湯包。日中は佛光山の大仏と八塔、夜はホテル近くで早めに夕食", "stops": [{"order": 1, "lat": 22.6322, "lon": 120.2977, "precision": "推定", "name": "興隆居", "nav": "興隆居 高雄", "arrive_move": "徒歩", "items": [{"start": "07:00", "end": "08:00", "act": "朝食：興隆居（湯包・焼包）", "place": "興隆居", "book": "-", "move": "徒歩", "memo": "ホテルから徒歩約10〜15分（推測）。04:30〜11:30・月火定休（資料による）", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 22.6875, "lon": 120.3086, "precision": "確定", "name": "左營高鐵駅", "nav": "左營高鐵駅 高雄", "arrive_move": "鉄道（MRT）", "items": [{"start": "08:45", "end": "09:30", "act": "MRTで左營へ・直通バスに乗る", "place": "左營高鐵駅", "book": "-", "move": "鉄道（MRT）", "memo": "美麗島から紅線で左營。佛光山行きの直通バス（哈佛快線／義大客運）。時刻は要確認", "status": "要確認", "type": "rest"}]}, {"order": 3, "lat": 22.757, "lon": 120.438, "precision": "確定", "name": "佛光山佛陀紀念館", "nav": "佛光山佛陀紀念館 高雄", "arrive_move": "バス", "items": [{"start": "10:15", "end": "14:30", "act": "佛光山佛陀紀念館", "place": "佛光山佛陀紀念館", "book": "-", "move": "バス", "memo": "金曜は09:00〜18:00（火曜休館）。入場無料。見学の目安は2〜4時間。大仏は高さ108m", "status": "案", "type": "field"}]}, {"order": 4, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "nav": "福容徠旅 高雄", "arrive_move": "バス", "items": [{"start": "15:45", "end": "17:30", "act": "高雄へ戻る・休憩", "place": "福容徠旅 高雄", "book": "-", "move": "バス", "memo": "", "status": "案", "type": "rest"}, {"start": "18:00", "end": "19:30", "act": "夕食：ホテル周辺で早めに", "place": "福容徠旅 高雄周辺", "book": "-", "move": "徒歩", "memo": "六合夜市は徒歩約8〜10分（口コミより）。観光色が強いので、前金周辺の食堂でも可。翌朝6時台に出発するため早めに", "status": "案", "type": "meal"}, {"start": "20:00", "end": "", "act": "荷造り・就寝／宿泊：福容徠旅 高雄（2泊目）", "place": "福容徠旅 高雄", "book": "予約済", "move": "-", "memo": "予約書は出発3時間前＝06:45の空港着を推奨", "status": "確定", "type": "rest"}]}], "weather": {"lat": 22.6312, "lon": 120.2945, "place": "福容徠旅 高雄（Fullon Poshtel）"}}, {"date": "2026/11/28", "dow": "土", "title": "Day8：高雄→那覇（暮らし初日）", "highlight": "昼に那覇着、ゆいレールで美栄橋へ。19時でスタッフが帰る宿なので先にチェックインし、壺屋を散歩して夜は公設市場の「持ち上げ」", "stops": [{"order": 1, "lat": 22.6312, "lon": 120.2945, "precision": "推定", "name": "福容徠旅 高雄（Fullon Poshtel）", "nav": "福容徠旅 高雄", "arrive_move": "-", "items": [{"start": "06:00", "end": "06:15", "act": "起床・チェックアウト", "place": "福容徠旅 高雄", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}, {"order": 2, "lat": 22.5771, "lon": 120.35, "precision": "確定", "name": "高雄国際空港", "nav": "高雄国際空港", "arrive_move": "タクシー", "items": [{"start": "06:15", "end": "09:45", "act": "空港へ・チェックイン・出国", "place": "高雄国際空港", "book": "-", "move": "タクシー", "memo": "ホテルから空港は約9.5km・タクシー約20分（推測）。受託20kg/人", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 26.206, "lon": 127.651, "precision": "確定", "name": "那覇空港", "nav": "那覇空港 那覇市", "arrive_move": "飛行機", "items": [{"start": "09:45", "end": "12:30", "act": "✈ 高雄→那覇（タイガーエア台湾 IT288）", "place": "高雄国際空港→那覇空港", "book": "予約済", "move": "飛行機", "memo": "受託手荷物20kg/人", "status": "確定", "type": "flight"}, {"start": "12:30", "end": "13:15", "act": "入国・荷物受取", "place": "那覇空港", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}, {"order": 4, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "nav": "スマートコンド泊 那覇市", "arrive_move": "鉄道（ゆいレール）＋徒歩", "items": [{"start": "13:15", "end": "14:00", "act": "ゆいレールで美栄橋へ・宿に荷物", "place": "スマートコンド泊（那覇市泊2-1-9）", "book": "予約済", "move": "鉄道（ゆいレール）＋徒歩", "memo": "那覇空港→美栄橋 約15分（推測）、美栄橋駅から徒歩約8分。チェックイン15:00〜。荷物の先預けは要確認", "status": "要確認", "type": "rest"}, {"start": "14:00", "end": "15:00", "act": "遅めの昼食：宿の近所の食堂", "place": "泊・前島周辺", "book": "-", "move": "徒歩", "memo": "店は現地で選定", "status": "案", "type": "meal"}, {"start": "15:00", "end": "15:20", "act": "チェックイン", "place": "スマートコンド泊", "book": "予約済", "move": "徒歩", "memo": "19:00以降はスタッフ不在のため、明るいうちに済ませる", "status": "確定", "type": "rest"}]}, {"order": 5, "lat": 26.2122, "lon": 127.6895, "precision": "推定", "name": "壺屋やちむん通り", "nav": "壺屋やちむん通り 那覇市", "arrive_move": "鉄道（ゆいレール）＋徒歩", "items": [{"start": "15:45", "end": "17:15", "act": "壺屋やちむん通り〜浮島通りを散歩（器探し）", "place": "壺屋やちむん通り", "book": "-", "move": "鉄道（ゆいレール）＋徒歩", "memo": "美栄橋→牧志は1駅、牧志駅から徒歩約10分（推測）。日没17:37（計算値）", "status": "案", "type": "city"}]}, {"order": 6, "lat": 26.2144, "lon": 127.687, "precision": "確定", "name": "第一牧志公設市場", "nav": "第一牧志公設市場 那覇市", "arrive_move": "徒歩", "items": [{"start": "17:30", "end": "19:30", "act": "夕食：第一牧志公設市場の「持ち上げ」", "place": "第一牧志公設市場", "book": "-", "move": "徒歩", "memo": "1階で魚・肉を選び、2階食堂で調理してもらう。調理LO19:45、2階食堂LO20:00。定休は毎月第4日曜（11月は22日）なので営業日", "status": "案", "type": "meal"}]}, {"order": 7, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "nav": "スマートコンド泊 那覇市", "arrive_move": "徒歩", "items": [{"start": "20:00", "end": "", "act": "宿泊：スマートコンド泊（1泊目）", "place": "スマートコンド泊", "book": "予約済", "move": "徒歩", "memo": "公設市場から徒歩約15〜20分（推測）。3連泊", "status": "確定", "type": "rest"}]}], "weather": {"lat": 26.2228, "lon": 127.679, "place": "スマートコンド泊"}}, {"date": "2026/11/29", "dow": "日", "title": "Day9：ゆいレールと徒歩でライブの日", "highlight": "車は使わない日。朝は宿から歩いて泊いゆまち（体力次第）、昼は宿で体力温存。ライブ前にジャッキーでステーキ、帰りは栄町で〆", "stops": [{"order": 1, "lat": 26.229, "lon": 127.676, "precision": "推定", "name": "泊いゆまち", "nav": "泊いゆまち 那覇市", "arrive_move": "徒歩", "items": [{"start": "07:30", "end": "09:00", "act": "朝食：泊いゆまちで海鮮（案・当日の体力次第）", "place": "泊いゆまち", "book": "-", "move": "徒歩", "memo": "宿から徒歩約10〜15分（推測）。7:00〜17:00（店舗により異なる）。地元の飲食店も仕入れる市場で、イートインあり。人気の刺身は午前中に売り切れが多い", "status": "案", "type": "meal"}]}, {"order": 2, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "nav": "スマートコンド泊 那覇市", "arrive_move": "徒歩", "items": [{"start": "09:30", "end": "14:15", "act": "宿で休憩・近所を散歩（体力温存）", "place": "スマートコンド泊", "book": "-", "move": "徒歩", "memo": "メインはライブなので、日中は無理に予定を入れない。昼は軽めに", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 26.2141, "lon": 127.6738, "precision": "推定", "name": "ジャッキーステーキハウス", "nav": "ジャッキーステーキハウス 那覇市", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "14:45", "end": "16:10", "act": "早めの夕食：ジャッキーステーキハウス", "place": "ジャッキーステーキハウス（那覇市西1-7-3）", "book": "予約不可（店頭の名簿に記入）", "move": "鉄道（ゆいレール）", "memo": "美栄橋→旭橋は2駅（約4分・推測）＋徒歩約5分。1953年創業、米軍統治時代からの老舗。名物はテンダーロインステーキ。11:00〜22:30頃（最終受付22:00）・水曜定休・現金のみ。昼のピークを過ぎた時間を狙う（空き具合は推測）。待ちが長ければ16:10で切り上げて会場へ（全席指定なので開演18:00に間に合えばよい）", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 26.246, "lon": 127.729, "precision": "推定", "name": "ゆいレール浦添前田駅", "nav": "ゆいレール浦添前田駅 浦添市", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "16:10", "end": "16:40", "act": "旭橋→浦添前田（ゆいレール）", "place": "ゆいレール浦添前田駅", "book": "-", "move": "鉄道（ゆいレール）", "memo": "乗り換えなし・約25分（推測）", "status": "案", "type": "rest"}]}, {"order": 5, "lat": 26.2447, "lon": 127.724, "precision": "推定", "name": "AIM UNIVERSE TEDAKO HALL", "nav": "てだこホール 浦添市", "arrive_move": "徒歩", "items": [{"start": "16:40", "end": "20:30", "act": "🎵 カネコアヤノ ライブ（open 17:00／start 18:00）", "place": "AIM UNIVERSE TEDAKO HALL", "book": "チケット取得済（全席指定）", "move": "徒歩", "memo": "浦添前田駅から徒歩約17分。問合せ：PM AGENCY 098-898-1331（平日11:00〜15:00）", "status": "確定", "type": "field"}]}, {"order": 6, "lat": 26.246, "lon": 127.729, "precision": "推定", "name": "ゆいレール浦添前田駅", "nav": "ゆいレール浦添前田駅 浦添市", "arrive_move": "徒歩", "items": [{"start": "20:30", "end": "21:00", "act": "浦添前田駅へ（徒歩約17分）", "place": "ゆいレール浦添前田駅", "book": "-", "move": "徒歩", "memo": "", "status": "案", "type": "rest"}]}, {"order": 7, "lat": 26.2203, "lon": 127.6996, "precision": "推定", "name": "栄町市場", "nav": "栄町市場 那覇市", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "21:15", "end": "22:30", "act": "栄町で〆", "place": "栄町市場", "book": "-", "move": "鉄道（ゆいレール）", "memo": "浦添前田→安里 16分。遅い時間は閉まる店もあるので要確認", "status": "案", "type": "meal"}]}, {"order": 8, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "nav": "スマートコンド泊 那覇市", "arrive_move": "鉄道（ゆいレール）＋徒歩", "items": [{"start": "22:45", "end": "", "act": "宿泊：スマートコンド泊（2泊目）", "place": "スマートコンド泊", "book": "予約済", "move": "鉄道（ゆいレール）＋徒歩", "memo": "安里→美栄橋は2駅（約4分・推測）＋徒歩約8分。ゆいレールの最終は23時台（要確認）、逃したらタクシーで約10分（推測）", "status": "確定", "type": "rest"}]}], "weather": {"lat": 26.2228, "lon": 127.679, "place": "スマートコンド泊"}}, {"date": "2026/11/30", "dow": "月", "title": "Day10：レンタカーで中部ドライブ", "highlight": "県庁前で車を借りて、海中道路と浜比嘉島の海、コザで元祖タコス、港川外人住宅、北谷・砂辺の夕日とGORDIESのバーガー。帰りは国道58号で県庁前へ", "stops": [{"order": 1, "lat": 26.215, "lon": 127.6793, "precision": "推定", "name": "レンタカー営業所（県庁前・予定）", "nav": "県庁前駅 那覇市", "arrive_move": "徒歩", "items": [{"start": "08:30", "end": "09:00", "act": "レンタカー受取（県庁前の営業所）", "place": "レンタカー営業所（例：県庁前・パレットくもじ）", "book": "要予約", "move": "徒歩", "memo": "宿から徒歩約12分（推測）／ゆいレールなら美栄橋→県庁前1駅。例：ニッポンレンタカー 県庁前（パレットくもじ内）。営業時間・返却時刻は予約時に確認", "status": "要手配", "type": "todo"}]}, {"order": 2, "lat": 26.333, "lon": 127.917, "precision": "推定", "name": "海中道路・海の駅あやはし館", "nav": "海の駅あやはし館", "arrive_move": "車", "items": [{"start": "09:00", "end": "10:15", "act": "海中道路へ・海の駅あやはし館", "place": "海中道路", "book": "-", "move": "車", "memo": "那覇IC→沖縄北IC（沖縄自動車道）経由で約1時間（推測）。全長約4.7kmの無料道路で、目線の高さに遠浅の海が広がる", "status": "案", "type": "field"}]}, {"order": 3, "lat": 26.3243, "lon": 127.9612, "precision": "推定", "name": "浜比嘉島（シルミチュー）", "nav": "シルミチュー 浜比嘉島", "arrive_move": "車", "items": [{"start": "10:30", "end": "12:00", "act": "浜比嘉島：シルミチュー・集落を散歩", "place": "浜比嘉島", "book": "-", "move": "車", "memo": "海中道路から車で約15分（推測）。琉球の創世神話の神が住んだとされる島。観光客が少なく静か。時間があれば伊計島まで足を延ばすのも可", "status": "案", "type": "field"}]}, {"order": 4, "lat": 26.3357, "lon": 127.8027, "precision": "推定", "name": "チャーリー多幸寿（コザ）", "nav": "チャーリー多幸寿 沖縄市", "arrive_move": "車", "items": [{"start": "12:45", "end": "13:45", "act": "昼食：チャーリー多幸寿（沖縄タコスの元祖）", "place": "チャーリー多幸寿（沖縄市中央4-11-5）", "book": "-", "move": "車", "memo": "1956年創業。11:00〜17:30・木曜定休（11/30は月曜で営業日）。浜比嘉島から約40分（推測）。食後にパークアベニュー〜ゲート通りを少し歩くとコザの街並みも見られる", "status": "案", "type": "meal"}]}, {"order": 5, "lat": 26.2525, "lon": 127.716, "precision": "推定", "name": "港川外人住宅", "nav": "港川外人住宅 浦添市", "arrive_move": "車", "items": [{"start": "14:30", "end": "16:30", "act": "港川外人住宅を散策・カフェ", "place": "港川外人住宅", "book": "-", "move": "車", "memo": "コザから約40分（推測）。米軍関係者向け住宅を改装したカフェ・雑貨店が集まるエリア。月曜休みの店もあるので、目当ての店は事前に確認", "status": "案", "type": "city"}]}, {"order": 6, "lat": 26.327, "lon": 127.752, "precision": "推定", "name": "砂辺馬場公園・宮城海岸", "nav": "砂辺馬場公園 北谷町", "arrive_move": "車", "items": [{"start": "16:50", "end": "17:45", "act": "砂辺・宮城海岸で夕日（日没17:36・計算値）", "place": "砂辺馬場公園・宮城海岸", "book": "-", "move": "車", "memo": "港川から約20分（推測）。西向きの海岸で、嘉手納基地が近く軍用機が頭上を飛ぶ。北谷のアメリカンビレッジより落ち着いている", "status": "案", "type": "field"}]}, {"order": 7, "lat": 26.3292, "lon": 127.756, "precision": "推定", "name": "GORDIES", "nav": "GORDIES 北谷町", "arrive_move": "車（徒歩圏）", "items": [{"start": "17:45", "end": "18:45", "act": "夕食：GORDIES（炭火焼きパティのハンバーガー）", "place": "GORDIES（北谷町砂辺100）", "book": "-", "move": "車（徒歩圏）", "memo": "外人住宅を改装した店。食べログ百名店。営業時間は11:00〜20:00/21:00で情報が分かれる・不定休なので要確認。運転するので酒は無し", "status": "要確認", "type": "meal"}]}, {"order": 8, "lat": 26.215, "lon": 127.6793, "precision": "推定", "name": "レンタカー営業所（県庁前・予定）", "nav": "県庁前駅 那覇市", "arrive_move": "車", "items": [{"start": "18:45", "end": "19:45", "act": "那覇へ戻りレンタカー返却", "place": "レンタカー営業所（例：県庁前・パレットくもじ）", "book": "-", "move": "車", "memo": "国道58号を南下すればそのまま県庁前に着く。約50分（推測・夕方は渋滞しやすい）。ガソリン満タン返し", "status": "案", "type": "rest"}]}, {"order": 9, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "nav": "スマートコンド泊 那覇市", "arrive_move": "徒歩", "items": [{"start": "20:00", "end": "", "act": "宿泊：スマートコンド泊（3泊目）", "place": "スマートコンド泊", "book": "予約済", "move": "徒歩", "memo": "", "status": "確定", "type": "rest"}]}], "weather": {"lat": 26.2228, "lon": 127.679, "place": "スマートコンド泊"}}, {"date": "2026/12/1", "dow": "火", "title": "Day11：那覇→福岡→中津", "highlight": "空港のA&Wでルートビアの飲み納め。福岡からソニックで中津に戻り、ポラを受け取って帰宅", "stops": [{"order": 1, "lat": 26.2228, "lon": 127.679, "precision": "推定", "name": "スマートコンド泊", "nav": "スマートコンド泊 那覇市", "arrive_move": "-", "items": [{"start": "09:15", "end": "09:30", "act": "チェックアウト", "place": "スマートコンド泊", "book": "-", "move": "-", "memo": "チェックアウトは10:00まで（じゃらん掲載の施設情報。プランにより異なる場合あり）", "status": "要確認", "type": "rest"}]}, {"order": 2, "lat": 26.206, "lon": 127.651, "precision": "確定", "name": "那覇空港", "nav": "那覇空港 那覇市", "arrive_move": "鉄道（ゆいレール）", "items": [{"start": "09:30", "end": "10:15", "act": "ゆいレールで空港へ・チェックイン", "place": "那覇空港", "book": "-", "move": "鉄道（ゆいレール）", "memo": "美栄橋駅まで徒歩約8分、美栄橋→那覇空港 約15分（推測）", "status": "案", "type": "rest"}]}, {"order": 3, "lat": 26.2068, "lon": 127.6503, "precision": "推定", "name": "A&W 那覇空港店", "nav": "A&W 那覇空港店 那覇市", "arrive_move": "徒歩", "items": [{"start": "10:15", "end": "11:00", "act": "A&W 那覇空港店でルートビアとバーガー", "place": "A&W 那覇空港店（国内線ターミナル3F）", "book": "-", "move": "徒歩", "memo": "日本では沖縄にしかないチェーン。7:00〜20:00・無休。混んでいたらテイクアウトに切り替え。保安検査は出発20分前（11:20）まで", "status": "案", "type": "meal"}]}, {"order": 4, "lat": 33.5859, "lon": 130.4507, "precision": "確定", "name": "福岡空港", "nav": "福岡空港 福岡市", "arrive_move": "飛行機", "items": [{"start": "11:40", "end": "13:20", "act": "✈ 那覇→福岡（JTA052）", "place": "那覇空港→福岡空港", "book": "予約済", "move": "飛行機", "memo": "", "status": "確定", "type": "flight"}]}, {"order": 5, "lat": 33.5985, "lon": 131.1884, "precision": "推定", "name": "中津", "nav": "中津駅", "arrive_move": "鉄道（特急ソニック＋地下鉄）", "items": [{"start": "14:00", "end": "15:50", "act": "福岡空港→博多→中津（特急ソニック）", "place": "福岡空港→博多駅→中津駅", "book": "-", "move": "鉄道（特急ソニック＋地下鉄）", "memo": "博多14:30前後発の想定（推測）。実際の時刻は要確認", "status": "要確認", "type": "rest"}, {"start": "16:00", "end": "17:00", "act": "ポラを受け取って帰宅", "place": "中津", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}, {"start": "17:00", "end": "", "act": "帰宅（車）", "place": "帰宅", "book": "-", "move": "-", "memo": "", "status": "案", "type": "rest"}]}], "weather": {"lat": 33.5985, "lon": 131.1884, "place": "中津"}}];
+// アプリ名（旅のしおり）は固定。旅行名はヘッダーと全体画面に小さく添える
+const TRIP_NAME = '台湾縦断＋沖縄';
+const DATA_SOURCE = 'taiwan_okinawa_schedule_2026_v10.xlsx';
 
 const DAY_COLORS = ['#1C4E63','#C9962B','#7A4B30','#3E7C99','#4E7A52','#8E5B3D','#6C5B8E','#B23A2E','#2E8B8B','#A0662A','#5A6B7A'];
 
@@ -553,6 +591,9 @@ const STATE = {
 let renderGeneration = 0;
 let mapReady = false;
 let mapFailed = false;
+// いま旅程画面に出しているもの。地図の読み込み完了・全画面切り替え時に、地図だけを描き直すために使う
+// { type:'day', di, legs:[{kind, a, b, move, res, lineId}], boundsPts } | { type:'ov', boundsPts }
+let currentView = null;
 
 /* ============ 1. コアロジック（core_logic.js と同一） ============ */
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -648,8 +689,10 @@ function toDateOnly(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDat
 const WX_FORECAST_MAX_DAYS = 15; // Open-Meteoの日次予報が安定して取れる目安の日数
 const weatherCache = new Map();
 
-async function callOpenMeteo(base, lat, lon, dateStr) {
-  const url = `${base}?latitude=${lat}&longitude=${lon}&start_date=${dateStr}&end_date=${dateStr}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`;
+async function callOpenMeteo(base, lat, lon, dateStr, withPrecip) {
+  // 降水確率は予報APIにしかない（過去データAPIに付けるとエラーになる）
+  const daily = 'weathercode,temperature_2m_max,temperature_2m_min' + (withPrecip ? ',precipitation_probability_max' : '');
+  const url = `${base}?latitude=${lat}&longitude=${lon}&start_date=${dateStr}&end_date=${dateStr}&daily=${daily}&timezone=auto`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 8000);
   try {
@@ -661,7 +704,8 @@ async function callOpenMeteo(base, lat, lon, dateStr) {
     const tmin = data?.daily?.temperature_2m_min?.[0];
     const code = data?.daily?.weathercode?.[0];
     if (tmax == null || tmin == null || code == null) return { status: "unavailable" };
-    return { status: "ok", tmax, tmin, code };
+    const pp = data?.daily?.precipitation_probability_max?.[0];
+    return { status: "ok", tmax, tmin, code, pp: pp == null ? null : pp };
   } catch (e) {
     clearTimeout(t);
     return { status: "error" };
@@ -681,7 +725,7 @@ async function fetchWeather(day) {
   if (diffDays > WX_FORECAST_MAX_DAYS) {
     result = { status: "too_future", availableInDays: diffDays - WX_FORECAST_MAX_DAYS };
   } else if (diffDays >= 0) {
-    result = await callOpenMeteo("https://api.open-meteo.com/v1/forecast", day.weather.lat, day.weather.lon, dateStr);
+    result = await callOpenMeteo("https://api.open-meteo.com/v1/forecast", day.weather.lat, day.weather.lon, dateStr, true);
   } else {
     result = await callOpenMeteo("https://archive-api.open-meteo.com/v1/archive", day.weather.lat, day.weather.lon, dateStr);
   }
@@ -689,43 +733,31 @@ async function fetchWeather(day) {
   return result;
 }
 
-function ensureWxPanel() {
-  let panel = document.getElementById('wxPanel');
-  if (panel) return panel;
-  panel = document.createElement('div');
-  panel.className = "wx-panel"; panel.id = "wxPanel";
-  document.getElementById('map').appendChild(panel);
-  return panel;
-}
-function removeWxPanel() {
-  const panel = document.getElementById('wxPanel');
-  if (panel) panel.remove();
-}
-function removeOvLegend() {
-  const legend = document.getElementById('ovLegend');
-  if (legend) legend.remove();
+function wxIconHtml(code) {
+  const cat = wxCategory(code);
+  return `<span class="wx-icon-${cat}">${WX_ICON[cat === "mclear" ? "clear" : cat]}</span>`;
 }
 
+// 天気は日の見出しのチップに出す（夜を過ごす場所の天気）
 async function renderWeather(day, myGen) {
-  if (!day.weather) { removeWxPanel(); return; }
-  const panel = ensureWxPanel();
-  panel.innerHTML = `<div class="wx-loading">${escapeHtml(day.weather.place)}の天気を確認中…</div>`;
+  const chip = document.getElementById('wxChip');
+  if (!chip) return;
+  if (!day.weather) { chip.hidden = true; return; }
+  chip.className = 'chip muted';
+  chip.textContent = '天気を確認中…';
   const wx = await fetchWeather(day);
   if (myGen !== renderGeneration) return; // 日付が切り替わっていたら古い応答は捨てる
   if (wx.status === "ok") {
     const cat = wxCategory(wx.code);
-    panel.innerHTML = `
-      <div class="wx-row">
-        <span class="wx-icon-${cat}">${WX_ICON[cat === "mclear" ? "clear" : cat]}</span>
-        <span class="wx-temp">${Math.round(wx.tmax)}° / ${Math.round(wx.tmin)}°</span>
-      </div>
-      <div class="wx-label">${WX_LABEL[cat]}・${escapeHtml(day.weather.place)}</div>`;
+    chip.className = 'chip';
+    chip.title = `${day.weather.place}の天気`;
+    chip.innerHTML = `${wxIconHtml(wx.code)}${WX_LABEL[cat]} <b>${Math.round(wx.tmax)}°/${Math.round(wx.tmin)}°</b>${wx.pp != null ? `　☂<b>${Math.round(wx.pp)}%</b>` : ''}`;
   } else if (wx.status === "too_future") {
-    panel.innerHTML = `<div class="wx-label">天気予報はまだ取得できません<br>（${escapeHtml(day.weather.place)}／あと${wx.availableInDays}日ほどで取得可能に）</div>`;
+    chip.textContent = `天気予報はあと${wx.availableInDays}日ほどで表示`;
   } else if (wx.status === "unavailable") {
-    panel.innerHTML = `<div class="wx-label">この日の天気データは提供期間外です<br>（${escapeHtml(day.weather.place)}）</div>`;
+    chip.hidden = true;
   } else {
-    panel.innerHTML = `<div class="wx-label">天気を取得できませんでした<br>（${escapeHtml(day.weather.place)}）</div>`;
+    chip.textContent = '天気を取得できませんでした';
   }
 }
 
@@ -773,17 +805,22 @@ function showMapUnavailable() {
 function initMapWhenAvailable() {
   if (typeof maplibregl === 'undefined') { showMapUnavailable(); return; }
   try {
+    const first = TRIP[0] && TRIP[0].stops[0];
     map = new maplibregl.Map({
       container: 'map',
       style: 'https://tiles.openfreemap.org/styles/liberty',
-      center: [125.0, 27.0], // [lng, lat] の順（Leafletと逆なので注意）
+      center: first ? [first.lon, first.lat] : [135.0, 35.0], // [lng, lat] の順
       zoom: 4,
+      attributionControl: { compact: true },
     });
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+    applyMapMode();
     map.on('load', () => {
       mapReady = true;
-      buildRail();
-      if (STATE.screen === 'trip') renderCurrentTripView();
+      // 出典表示は（i）ボタンに畳む。小さな地図では操作を止めているため、自動では畳まれない
+      document.querySelectorAll('.maplibregl-ctrl-attrib.maplibregl-compact-show').forEach(el => el.classList.remove('maplibregl-compact-show'));
+      // 画面全体は描き直さず、地図の部分だけを描く（読み込み中にスクロールした位置を戻さないため）
+      drawCurrentMap();
     });
     map.on('error', (e) => { console.warn('map error', e && e.error); });
     const timeoutId = setTimeout(() => { if (!mapReady) showMapUnavailable(); }, 9000);
@@ -823,7 +860,7 @@ function dayChipEl(dayNum, color) {
   return wrap.firstElementChild;
 }
 function addMarker(lat, lon, el, popupHtml, onClick) {
-  if (!map) { if (onClick) { /* 地図がなくても導線自体は呼べるよう握りつぶさない */ } return null; }
+  if (!map || !mapReady) return null;
   const marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(map);
   if (popupHtml) marker.setPopup(new maplibregl.Popup({ offset: 16 }).setHTML(popupHtml));
   if (onClick) el.addEventListener('click', onClick);
@@ -831,7 +868,7 @@ function addMarker(lat, lon, el, popupHtml, onClick) {
   return marker;
 }
 function addLabelMarker(lat, lon, text) {
-  if (!map) return null;
+  if (!map || !mapReady) return null;
   const el = document.createElement('div');
   el.className = "route-label";
   el.textContent = text;
@@ -840,7 +877,7 @@ function addLabelMarker(lat, lon, text) {
   return marker;
 }
 function addLine(coordsLatLon, style) {
-  if (!map) return null;
+  if (!map || !mapReady) return null;
   const id = 'line-' + (lineIdSeq++);
   const geojson = {
     type: 'Feature', properties: {},
@@ -860,11 +897,62 @@ function removeLine(id) {
   mapLineIds = mapLineIds.filter(x => x !== id);
 }
 function fitBoundsLatLon(pointsLatLon, opts) {
-  if (!map || !pointsLatLon.length) return;
+  if (!map || !mapReady || !pointsLatLon.length) return;
   const bounds = new maplibregl.LngLatBounds();
   pointsLatLon.forEach(([lat, lon]) => bounds.extend([lon, lat]));
   map.fitBounds(bounds, opts);
 }
+
+/* ---- 地図の表示モード：スマホは「小さく表示（操作なし）→タップで全画面（操作あり）」、PCは常に操作可 ---- */
+// 小さな地図の上で指が地図に吸われて画面をスクロールできなくなるのを防ぐため、小さい間は地図操作を止めている
+const WIDE_MQ = window.matchMedia('(min-width: 880px)');
+let mapFull = false;
+function isWide() { return WIDE_MQ.matches; }
+function applyMapMode() {
+  if (!map) return;
+  const on = isWide() || mapFull;
+  ['dragPan', 'scrollZoom', 'boxZoom', 'dragRotate', 'keyboard', 'doubleClickZoom', 'touchZoomRotate', 'touchPitch'].forEach(h => {
+    if (map[h]) on ? map[h].enable() : map[h].disable();
+  });
+}
+function mapPadding() { return (isWide() || mapFull) ? 60 : 24; }
+function refitCurrentMap() {
+  if (!currentView || !currentView.boundsPts.length) return;
+  fitBoundsLatLon(currentView.boundsPts, { padding: mapPadding(), maxZoom: currentView.type === 'day' ? 14 : 8, duration: 0 });
+}
+function openMapFull(stopIndex) {
+  if (isWide()) {
+    if (stopIndex != null) flyToStop(stopIndex);
+    return;
+  }
+  mapFull = true;
+  document.getElementById('mapWrap').classList.add('full');
+  document.body.classList.add('map-open');
+  applyMapMode();
+  if (map) {
+    map.resize();
+    if (stopIndex != null) flyToStop(stopIndex, 0);
+    else refitCurrentMap();
+  }
+}
+function closeMapFull() {
+  if (!mapFull) return;
+  mapFull = false;
+  document.getElementById('mapWrap').classList.remove('full');
+  document.body.classList.remove('map-open');
+  applyMapMode();
+  if (map) { map.resize(); refitCurrentMap(); }
+}
+function flyToStop(i, duration) {
+  if (!map || !mapReady || !currentView || currentView.type !== 'day') return;
+  const s = TRIP[currentView.di].stops[i];
+  if (!s) return;
+  map.flyTo({ center: [s.lon, s.lat], zoom: Math.max(map.getZoom(), 14), duration: duration == null ? 600 : duration });
+}
+document.getElementById('mapTap').addEventListener('click', () => openMapFull(null));
+document.getElementById('mapClose').addEventListener('click', closeMapFull);
+function onWideChange() { if (isWide()) closeMapFull(); applyMapMode(); updateStickyH(); if (map) { map.resize(); refitCurrentMap(); } }
+if (WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change', onWideChange); else WIDE_MQ.addListener(onWideChange);
 function styleForKind(kind) {
   if (kind === "foot") return { color: "#C9962B", weight: 4, dashArray: null, opacity: .9 };
   if (kind === "driving") return { color: "#1C4E63", weight: 4, dashArray: null, opacity: .85 };
@@ -873,160 +961,336 @@ function styleForKind(kind) {
   if (kind === "horse" || kind === "camel") return { color: "#7A4B30", weight: 3, dashArray: [1, 1.5], opacity: .85 };
   return { color: "#999", weight: 2, dashArray: [1.5, 1.5], opacity: .6 };
 }
-function fmtDist(km) { return km >= 10 ? `${km.toFixed(0)}km` : `${km.toFixed(1)}km`; }
+function fmtDist(km) {
+  if (km < 1) return `${Math.max(10, Math.round(km * 100) * 10)}m`;
+  return km >= 10 ? `${km.toFixed(0)}km` : `${km.toFixed(1)}km`;
+}
 function fmtMin(min) {
   if (min >= 60) { const h = Math.floor(min / 60), m = Math.round(min % 60); return m ? `${h}時間${m}分` : `${h}時間`; }
-  return `${Math.round(min)}分`;
+  return `${Math.max(1, Math.round(min))}分`;
 }
 function kindLabel(kind) {
   return { foot: "徒歩", driving: "車", flight: "空路", rail: "鉄道", horse: "乗馬", camel: "ラクダ", none: "", unknown: "移動" }[kind] || kind;
+}
+function moveIcon(kind, text) {
+  const t = text || "";
+  if (kind === "flight") return "✈️";
+  if (kind === "rail") return (t.includes("高鉄") || t.includes("新幹線")) ? "🚄" : "🚃";
+  if (kind === "foot") return "🚶";
+  if (kind === "driving") return t.includes("タクシー") ? "🚕" : (t.includes("バス") ? "🚌" : "🚗");
+  if (kind === "horse") return "🐎";
+  if (kind === "camel") return "🐫";
+  return "➡️";
+}
+// 「鉄道（MRT板南線）」→「MRT板南線」、「鉄道（ゆいレール）＋徒歩」→「ゆいレール＋徒歩」のように表示用に短くする
+function moveLabel(text) {
+  const t = (text || "").trim();
+  if (!t || t === "-") return "";
+  return t.replace(/鉄道（([^（）]+)）/g, '$1');
+}
+function legText(kind, res, moveText) {
+  const label = moveLabel(moveText) || kindLabel(kind);
+  if (kind === "foot") return `${label} ${fmtMin(res.durationMin)}（${fmtDist(res.distanceKm)}）`;
+  if (kind === "driving") return `${label} 約${fmtMin(res.durationMin)}（${fmtDist(res.distanceKm)}）`;
+  if (kind === "rail") return res.distanceKm >= 0.05 ? `${label}（直線${fmtDist(res.distanceKm)}）` : label;
+  if (kind === "flight") return `${label}（約${fmtDist(res.distanceKm)}）`;
+  if (kind === "horse" || kind === "camel") return `${label} 約${fmtMin(res.durationMin)}`;
+  return label;
+}
+
+/* ---- 日付・時刻（端末の現地時刻。スマホは渡航先で自動的に時差を切り替える） ---- */
+function todayStr() { const n = new Date(); return `${n.getFullYear()}/${n.getMonth() + 1}/${n.getDate()}`; }
+function todayIndex() { return TRIP.findIndex(t => t.date === todayStr()); }
+function mdOf(date) { return date.split('/').slice(1).join('/'); }
+function dayDateLabel(day) { return `${mdOf(day.date)}（${day.dow}）`; }
+function shortTitle(i) { return (SHORT_DAY_TITLE[i] || TRIP[i].title || '').replace(/^Day\d+[：:]\s*/, ''); }
+function shortHighlight(i) { return SHORT_DAY_HIGHLIGHT[i] || TRIP[i].highlight || ''; }
+function dayColor(i) { return DAY_COLORS[i % DAY_COLORS.length]; }
+function toMin(hhmm) { const m = /^(\d{1,2}):(\d{2})/.exec(String(hhmm || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; }
+function nowMin() { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+function fmtUntil(min) {
+  if (min < 60) return `あと${min}分`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `あと${h}時間${m}分` : `あと${h}時間`;
+}
+function tripPhase() {
+  const t = toDateOnly(new Date());
+  const first = parseDayDate(TRIP[0].date), last = parseDayDate(TRIP[TRIP.length - 1].date);
+  if (t < first) return { phase: 'before', days: Math.round((first - t) / 86400000) };
+  if (t > last) return { phase: 'after' };
+  return { phase: 'during', index: todayIndex() };
+}
+
+// 行動が必要なものだけをタグにする（「案」「確定」は旅行中に判断材料にならないので出さない）
+function itemTags(it) {
+  const tags = [];
+  const book = String(it.book || '').trim();
+  const st = String(it.status || '').trim();
+  if (/要予約/.test(book)) tags.push(['alert', '要予約']);
+  else if (/要手配/.test(book) || st === '要手配') tags.push(['alert', '要手配']);
+  if (st === '要確認') tags.push(['warn', '要確認']);
+  if (/予約済|取得済/.test(book)) tags.push(['ok', '✓ ' + book.replace(/（.*?）/g, '')]);
+  else if (/予約不可/.test(book)) tags.push(['neutral', '予約不可']);
+  return tags;
+}
+function isActionable(it) { return itemTags(it).some(t => t[0] === 'alert' || t[0] === 'warn'); }
+function countActionable(stops) {
+  let n = 0;
+  stops.forEach(s => s.items.forEach(it => { if (isActionable(it)) n++; }));
+  return n;
+}
+function navUrl(stop) {
+  // 地図アプリでの検索語。抽出時に地点名＋地域名で作る。個人宅など出さない地点は空文字
+  const q = stop.nav === undefined ? stop.name : stop.nav;
+  if (!q) return null;
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 }
 
 /* ============ 4. 1日分の描画 ============ */
 let activeDayIndex = -1; // -1 = 全体ルート
 
-function renderStatStrip(container, summary, todoCount) {
-  container.innerHTML = "";
+function renderStatChips(summary, actionable, pending) {
+  const el = document.getElementById('statChips');
+  if (!el) return;
   const chips = [];
-  chips.push(`<div class="chip"><span>徒歩</span><span class="num">${summary.walkKm}km / ${fmtMin(summary.walkMin)}</span></div>`);
-  chips.push(`<div class="chip"><span>車移動</span><span class="num">${summary.driveHours}時間</span></div>`);
-  if (summary.flightCount) chips.push(`<div class="chip"><span>フライト</span><span class="num">${summary.flightCount}区間</span></div>`);
-  if (summary.railCount) chips.push(`<div class="chip"><span>鉄道</span><span class="num">${summary.railCount}区間</span></div>`);
-  if (summary.otherMin) chips.push(`<div class="chip"><span>乗馬・ラクダ等</span><span class="num">${fmtMin(summary.otherMin)}</span></div>`);
-  chips.push(`<div class="chip level-${summary.level}"><span>体感負荷</span><span class="num">${summary.level}</span></div>`);
-  if (todoCount > 0) chips.push(`<div class="chip alert"><span>要対応</span><span class="num">${todoCount}件</span></div>`);
-  if (summary.hasEstimate) chips.push(`<div class="chip note">一部区間は概算値</div>`);
-  container.innerHTML = chips.join("");
+  if (pending) chips.push(`<span class="chip muted">移動を計算中…</span>`);
+  else {
+    if (summary.walkKm > 0) chips.push(`<span class="chip">🚶 徒歩 <b>${summary.walkKm}km</b></span>`);
+    if (summary.driveHours > 0) chips.push(`<span class="chip">🚗 車 <b>${summary.driveHours}時間</b></span>`);
+    if (summary.railCount) chips.push(`<span class="chip">🚃 鉄道 <b>${summary.railCount}</b>区間</span>`);
+    if (summary.flightCount) chips.push(`<span class="chip">✈️ <b>${summary.flightCount}</b>便</span>`);
+    if (summary.otherMin) chips.push(`<span class="chip">乗馬等 <b>${fmtMin(summary.otherMin)}</b></span>`);
+    chips.push(`<span class="chip lv-${summary.level}">負荷 <b>${summary.level}</b></span>`);
+  }
+  if (actionable > 0) chips.push(`<span class="chip alert">要対応 <b>${actionable}</b>件</span>`);
+  el.innerHTML = chips.join('');
 }
 
-async function renderDay(dayIndex) {
+function resolveLegRoute(leg) {
+  const { a, b } = leg;
+  if (leg.kind === "foot") return fetchRoute("foot", a.lat, a.lon, b.lat, b.lon);
+  if (leg.kind === "driving") return fetchRoute("driving", a.lat, a.lon, b.lat, b.lon);
+  const straight = haversineKm(a.lat, a.lon, b.lat, b.lon);
+  const coords = [[a.lat, a.lon], [b.lat, b.lon]];
+  if (leg.kind === "horse" || leg.kind === "camel") return Promise.resolve({ ...estimateNonRoutable(leg.kind, straight), coords });
+  if (leg.kind === "flight" || leg.kind === "rail") return Promise.resolve({ distanceKm: straight, durationMin: 0, coords, source: leg.kind });
+  return Promise.resolve({ distanceKm: 0, durationMin: 0, coords, source: "none" });
+}
+
+// 1区間分の線とラベルを地図に描く（経路が取れる前は点線の直線）
+function drawLeg(leg) {
+  if (!map || !mapReady) return;
+  if (leg.lineId) { removeLine(leg.lineId); leg.lineId = null; }
+  if (leg.labelMarker) { leg.labelMarker.remove(); leg.labelMarker = null; }
+  const style = styleForKind(leg.kind);
+  if (!leg.res) {
+    leg.lineId = addLine([[leg.a.lat, leg.a.lon], [leg.b.lat, leg.b.lon]], { ...style, dashArray: [1, 1.5] });
+    return;
+  }
+  leg.lineId = addLine(leg.res.coords, style);
+  if (leg.kind === "none") return;
+  if (leg.kind === "rail" && leg.res.distanceKm < 0.05) return;
+  const coords = leg.res.coords;
+  const [mlat, mlon] = coords[Math.floor(coords.length / 2)];
+  leg.labelMarker = addLabelMarker(mlat, mlon, `${moveIcon(leg.kind, leg.move)} ${legText(leg.kind, leg.res, leg.move)}`);
+}
+
+function drawDayMap() {
+  const v = currentView;
+  clearMap();
+  if (!map || !mapReady || !v || v.type !== 'day') return;
+  v.legs.forEach(leg => { leg.lineId = null; leg.labelMarker = null; drawLeg(leg); });
+  TRIP[v.di].stops.forEach((s, i) => {
+    addMarker(s.lat, s.lon, pinEl(i + 1, s.precision), `<b>${i + 1}. ${escapeHtml(s.name)}</b>`, () => { if (!mapFull) scrollToStop(i); });
+  });
+  refitCurrentMap();
+}
+function drawCurrentMap() {
+  if (!currentView) return;
+  if (currentView.type === 'day') drawDayMap();
+  else drawOverviewMap();
+}
+
+async function renderDay(dayIndex, opts) {
+  opts = opts || {};
   const myGen = ++renderGeneration;
   activeDayIndex = dayIndex;
+  PERSIST.lastDayIndex = dayIndex; savePersisted();
   updateRailActive();
-  clearMap();
-  removeOvLegend();
   const day = TRIP[dayIndex];
-  document.getElementById('dayTitle').textContent = SHORT_DAY_TITLE[dayIndex] || day.title;
-  document.getElementById('dayHighlight').textContent = SHORT_DAY_HIGHLIGHT[dayIndex] || day.highlight || "";
-
   const stops = day.stops;
-  const boundsPts = [];
-  stops.forEach((s, i) => {
-    const el = pinEl(i + 1, s.precision);
-    addMarker(s.lat, s.lon, el, `<b>${i + 1}. ${escapeHtml(s.name)}</b>`, () => scrollToStop(i));
-    boundsPts.push([s.lat, s.lon]);
-  });
-  if (boundsPts.length) fitBoundsLatLon(boundsPts, { padding: 40, maxZoom: 13, duration: 0 });
+  const isToday = day.date === todayStr();
 
-  // 経路：まず直線プレースホルダーを描画
-  const legLines = [];
-  for (let i = 1; i < stops.length; i++) {
-    const a = stops[i - 1], b = stops[i];
-    const kind = classifyMove(b.arrive_move);
-    const style = styleForKind(kind);
-    const lineId = addLine([[a.lat, a.lon], [b.lat, b.lon]], { ...style, dashArray: [1, 1.5] });
-    legLines.push({ kind, lineId, a, b, resolved: null });
-  }
-
-  renderTimeline(day, stops);
-  renderStatStrip(document.getElementById('statStrip'), summarizeDay([]), countTodo(stops));
-  document.getElementById('statStrip').insertAdjacentHTML('beforeend', '<div class="chip note">計算中…</div>');
+  document.getElementById('dayHead').innerHTML = `
+    <div class="dh-meta"><span class="dh-daynum" style="background:${dayColor(dayIndex)}">Day${dayIndex + 1}</span><span>${escapeHtml(dayDateLabel(day))}</span>${isToday ? '<span class="dh-today">今日</span>' : ''}</div>
+    <h2>${escapeHtml(shortTitle(dayIndex))}</h2>
+    <div class="highlight">${escapeHtml(shortHighlight(dayIndex))}</div>
+    <div class="summary"><span class="chip muted" id="wxChip"></span><span class="chips-inline" id="statChips"></span></div>`;
+  document.getElementById('prepBox').hidden = true;
+  document.getElementById('mapWrap').classList.remove('ov');
+  renderTimeline(day, stops, dayIndex);
+  renderNextCard(dayIndex);
+  renderStatChips(null, countActionable(stops), true);
   renderWeather(day, myGen);
+  if (!opts.keepScroll) window.scrollTo(0, 0);
+
+  const legs = [];
+  for (let i = 1; i < stops.length; i++) {
+    legs.push({ idx: i, kind: classifyMove(stops[i].arrive_move), move: stops[i].arrive_move, a: stops[i - 1], b: stops[i], res: null, lineId: null, labelMarker: null });
+  }
+  currentView = { type: 'day', di: dayIndex, legs, boundsPts: stops.map(s => [s.lat, s.lon]) };
+  if (map && mapReady) { map.resize(); drawDayMap(); }
 
   // 実経路 / 概算を非同期で取得して差し替え
-  const results = [];
-  for (const leg of legLines) {
-    let res;
-    if (leg.kind === "foot") res = await fetchRoute("foot", leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
-    else if (leg.kind === "driving") res = await fetchRoute("driving", leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
-    else if (leg.kind === "horse" || leg.kind === "camel") {
-      const straight = haversineKm(leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
-      res = estimateNonRoutable(leg.kind, straight);
-      res.coords = [[leg.a.lat, leg.a.lon], [leg.b.lat, leg.b.lon]];
-    } else if (leg.kind === "flight" || leg.kind === "rail") {
-      const straight = haversineKm(leg.a.lat, leg.a.lon, leg.b.lat, leg.b.lon);
-      res = { distanceKm: straight, durationMin: 0, coords: [[leg.a.lat, leg.a.lon], [leg.b.lat, leg.b.lon]], source: leg.kind };
-    } else {
-      res = { distanceKm: 0, durationMin: 0, coords: [[leg.a.lat, leg.a.lon], [leg.b.lat, leg.b.lon]], source: "none" };
-    }
+  for (const leg of legs) {
+    const res = await resolveLegRoute(leg);
     if (myGen !== renderGeneration) return; // 日付が切り替わっていたら、以降の描画・タイムライン更新を中断する
-    leg.resolved = res;
-    results.push({ kind: leg.kind, ...res });
-
-    // 見た目を実経路に更新
-    removeLine(leg.lineId);
-    const style = styleForKind(leg.kind);
-    leg.lineId = addLine(res.coords, style);
-    let label = "";
-    if (leg.kind === "foot" || leg.kind === "driving") label = `${kindLabel(leg.kind)} ${fmtDist(res.distanceKm)}・${fmtMin(res.durationMin)}${res.source === "estimate" ? "（概算）" : ""}`;
-    else if (leg.kind === "horse" || leg.kind === "camel") label = `${kindLabel(leg.kind)} 約${fmtMin(res.durationMin)}（概算）`;
-    else if (leg.kind === "flight") label = `空路 約${fmtDist(res.distanceKm)}`;
-    else if (leg.kind === "rail" && res.distanceKm >= 0.05) label = `鉄道 約${fmtDist(res.distanceKm)}`;
-    if (label) {
-      const midIdx = Math.floor(res.coords.length / 2);
-      const [mlat, mlon] = res.coords[midIdx];
-      addLabelMarker(mlat, mlon, label);
-    }
-
-    // タイムラインの区間表示を随時更新
-    updateLegInfoInTimeline(legLines.indexOf(leg) + 1, res, leg.kind);
+    leg.res = res;
+    drawLeg(leg);
+    updateLegInfoInTimeline(leg.idx, res, leg.kind, leg.move);
   }
-
   if (myGen !== renderGeneration) return;
-  renderStatStrip(document.getElementById('statStrip'), summarizeDay(results), countTodo(stops));
+  renderStatChips(summarizeDay(legs.map(l => ({ kind: l.kind, ...l.res }))), countActionable(stops), false);
 }
 
-function countTodo(stops) {
-  let n = 0;
-  stops.forEach(s => s.items.forEach(it => { if (it.type === "todo") n++; }));
-  return n;
+// その日の予定を時刻順に1列に並べたもの（「いま」「次」「終わった予定」の判定に使う）
+function flattenItems(day) {
+  const list = [];
+  day.stops.forEach((s, si) => s.items.forEach((it, ii) => list.push({ it, s, si, ii, start: toMin(it.start), end: toMin(it.end) })));
+  list.forEach((x, k) => {
+    // 終了時刻が空の予定は、次の予定の開始時刻で終わったとみなす
+    const nextStart = list.slice(k + 1).map(y => y.start).find(v => v != null);
+    x.effEnd = x.end != null ? x.end : (nextStart != null ? nextStart : null);
+  });
+  return list;
+}
+function nowNext(day) {
+  const list = flattenItems(day);
+  const n = nowMin();
+  const next = list.find(x => x.start != null && x.start > n) || null;
+  const current = list.filter(x => x.start != null && x.start <= n && (x.effEnd == null || n < x.effEnd)).pop() || null;
+  return { list, current, next, n };
 }
 
-function renderTimeline(day, stops) {
+function itemHtml(it, si, ii) {
+  const tags = itemTags(it);
+  const memo = String(it.memo || '').trim();
+  const longMemo = memo.length > 54;
+  return `
+    <div class="item t-${it.type}" data-si="${si}" data-ii="${ii}">
+      <div class="time">${escapeHtml(it.start || '')}${it.end ? `<span class="end">〜${escapeHtml(it.end)}</span>` : ''}</div>
+      <div class="ibody">
+        <div class="act">${escapeHtml(it.act)}</div>
+        ${tags.length ? `<div class="tags">${tags.map(t => `<span class="tag ${t[0]}">${escapeHtml(t[1])}</span>`).join('')}</div>` : ''}
+        ${memo ? `<div class="memo${longMemo ? ' clamp' : ''}">${escapeHtml(memo)}</div>` : ''}
+        ${longMemo ? `<button type="button" class="memo-more">続きを読む</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderTimeline(day, stops, dayIndex) {
   const el = document.getElementById('timeline');
-  el.innerHTML = "";
+  let html = '';
   stops.forEach((s, i) => {
-    const div = document.createElement('div');
-    div.className = "stop"; div.id = `stop-${i}`;
-    const legHtml = i === 0 ? "" : `<div class="leg-info" id="leg-${i}">前の地点から：計算中…</div>`;
-    const itemsHtml = s.items.map(it => `
-      <div class="item t-${it.type}">
-        <span class="time">${it.start}${it.end ? "–" + it.end : ""}</span>
-        <span class="act">${escapeHtml(it.act)}</span>
-        <span class="status">${escapeHtml(it.status)}</span>
-        ${it.memo ? `<div class="memo">${escapeHtml(it.memo)}</div>` : ""}
-      </div>`).join("");
+    if (i > 0) {
+      const kind = classifyMove(s.arrive_move);
+      html += `<div class="leg" id="leg-${i}"${kind === 'none' ? ' hidden' : ''}><span class="leg-ic">${moveIcon(kind, s.arrive_move)}</span><span class="leg-tx">${escapeHtml(moveLabel(s.arrive_move) || kindLabel(kind))}…</span></div>`;
+    }
     const stopKey = day.date + '#' + s.order;
     const articleIds = STOP_ARTICLE_INDEX.get(stopKey) || [];
-    const guideHtml = articleIds.length
-      ? `<div class="stop-guide-link"><button type="button" class="stop-guide-btn" data-stop-key="${escapeHtml(stopKey)}">📖 この場所のガイドを読む${articleIds.length > 1 ? `（${articleIds.length}件）` : ""}</button></div>`
-      : "";
-    div.innerHTML = `
-      <div class="stop-head">
-        <div class="badge prec-${s.precision}">${i + 1}</div>
-        <div class="stop-name">${escapeHtml(s.name)}<span class="tag">${s.precision}</span></div>
-      </div>
-      ${legHtml}
-      <div class="items">${itemsHtml}</div>
-      ${guideHtml}`;
-    div.addEventListener('click', () => {
-      if (map) map.flyTo({ center: [s.lon, s.lat], zoom: Math.max(map.getZoom(), 12), duration: 600 });
-    });
-    const guideBtn = div.querySelector('.stop-guide-btn');
-    if (guideBtn) {
-      guideBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation(); // 地図移動（flyTo）を誤発火させない
-        openStopArticles(stopKey, day.date, i);
-      });
-    }
-    el.appendChild(div);
+    const nav = navUrl(s);
+    html += `
+      <section class="stop" id="stop-${i}">
+        <div class="stop-head">
+          <div class="sh-main" data-stop="${i}" role="button" tabindex="0" aria-label="${escapeHtml(s.name)}を地図で見る">
+            <div class="badge prec-${s.precision}">${i + 1}</div>
+            <div class="stop-name">${escapeHtml(s.name)}</div>
+          </div>
+          ${nav ? `<a class="navbtn" href="${escapeHtml(nav)}" target="_blank" rel="noopener">マップ ↗</a>` : ''}
+        </div>
+        <div class="items">${s.items.map((it, ii) => itemHtml(it, i, ii)).join('')}</div>
+        ${articleIds.length ? `<div class="stop-guide-link"><button type="button" class="stop-guide-btn" data-stop-key="${escapeHtml(stopKey)}" data-stop-index="${i}">📖 この場所のガイドを読む${articleIds.length > 1 ? `（${articleIds.length}件）` : ''}</button></div>` : ''}
+      </section>`;
   });
+  html += `<div class="tl-note">距離・時間は目安です。鉄道の所要時間は各予定の時刻をご覧ください。</div>`;
+  el.innerHTML = html;
+
+  el.querySelectorAll('.sh-main').forEach(b => b.addEventListener('click', () => openMapFull(Number(b.dataset.stop))));
+  el.querySelectorAll('.memo-more').forEach(b => b.addEventListener('click', () => {
+    const memo = b.parentElement.querySelector('.memo');
+    if (memo) memo.classList.remove('clamp');
+    b.remove();
+  }));
+  el.querySelectorAll('.stop-guide-btn').forEach(b => b.addEventListener('click', () => {
+    openStopArticles(b.dataset.stopKey, day.date, Number(b.dataset.stopIndex));
+  }));
+  applyPastState(dayIndex);
+}
+
+// 今日の画面だけ、終わった予定を薄く・いまの予定を強調する
+function applyPastState(dayIndex) {
+  const day = TRIP[dayIndex];
+  const isToday = day && day.date === todayStr();
+  const { list, current, n } = day ? nowNext(day) : { list: [], current: null, n: 0 };
+  const stopDone = new Map();
+  list.forEach(x => {
+    const elm = document.querySelector(`#timeline .item[data-si="${x.si}"][data-ii="${x.ii}"]`);
+    const past = isToday && x.effEnd != null && x.effEnd <= n;
+    if (elm) {
+      elm.classList.toggle('past', past);
+      elm.classList.toggle('current', isToday && current === x);
+    }
+    stopDone.set(x.si, (stopDone.has(x.si) ? stopDone.get(x.si) : true) && past);
+  });
+  stopDone.forEach((done, si) => {
+    const st = document.getElementById(`stop-${si}`);
+    if (st) st.classList.toggle('past', done);
+  });
+}
+
+function renderNextCard(dayIndex) {
+  const el = document.getElementById('nextCard');
+  const day = TRIP[dayIndex];
+  if (dayIndex < 0 || !day || day.date !== todayStr()) { el.hidden = true; el.innerHTML = ''; return; }
+  const { current, next, n } = nowNext(day);
+  let html = '';
+  if (current) {
+    html += `<div class="nc-row"><span class="nc-label now">いま</span><div class="nc-body">
+      <div><span class="nc-time">${escapeHtml(current.it.start)}${current.it.end ? '〜' + escapeHtml(current.it.end) : ''}</span><span class="nc-act">${escapeHtml(current.it.act)}</span></div>
+    </div></div>`;
+  }
+  if (next) {
+    const move = next.ii === 0 && next.si > 0 ? next.s.arrive_move : next.it.move;
+    const ml = moveLabel(move);
+    const kind = classifyMove(move);
+    const nav = navUrl(next.s);
+    html += `<div class="nc-row"><span class="nc-label">次</span><div class="nc-body">
+      <div><span class="nc-time">${escapeHtml(next.it.start)}</span><span class="nc-act">${escapeHtml(next.it.act)}</span></div>
+      <div class="nc-until">${fmtUntil(next.start - n)}</div>
+      <div class="nc-sub">${ml ? `${moveIcon(kind, move)} ${escapeHtml(ml)}・` : ''}${escapeHtml(next.s.name)}</div>
+      <div class="nc-actions">
+        ${nav ? `<a class="btn primary" href="${escapeHtml(nav)}" target="_blank" rel="noopener">Googleマップで開く</a>` : ''}
+        <button type="button" class="btn ghost" data-goto-stop-index="${next.si}">予定を見る</button>
+      </div>
+    </div></div>`;
+  } else {
+    const tomorrow = TRIP[dayIndex + 1];
+    const t1 = tomorrow ? flattenItems(tomorrow).find(x => x.start != null) : null;
+    html += `<div class="nc-row"><span class="nc-label done">今日</span><div class="nc-body">
+      <div class="nc-act">今日の予定はここまでです。おつかれさまでした。</div>
+      ${t1 ? `<div class="nc-sub">明日は ${escapeHtml(t1.it.start)} ${escapeHtml(t1.it.act)} から</div>` : ''}
+    </div></div>`;
+  }
+  el.innerHTML = html;
+  el.hidden = false;
+  const b = el.querySelector('[data-goto-stop-index]');
+  if (b) b.addEventListener('click', () => scrollToStop(Number(b.dataset.gotoStopIndex)));
 }
 
 function openStopArticles(stopKey, date, stopIndex) {
   const ids = STOP_ARTICLE_INDEX.get(stopKey) || [];
   if (!ids.length) return;
-  STATE.articleReturn = { screen: 'trip', dayIndex: activeDayIndex, stopIndex, scrollY: document.getElementById('timeline').scrollTop };
+  STATE.articleReturn = { screen: 'trip', dayIndex: activeDayIndex, stopIndex, scrollY: window.scrollY };
   if (ids.length === 1) {
     navigateToArticle(ids[0]);
   } else {
@@ -1034,92 +1298,139 @@ function openStopArticles(stopKey, date, stopIndex) {
   }
 }
 
-function updateLegInfoInTimeline(stopIndex, res, kind) {
+function updateLegInfoInTimeline(stopIndex, res, kind, moveText) {
   const elm = document.getElementById(`leg-${stopIndex}`);
   if (!elm) return;
-  let text = "";
-  if (kind === "foot" || kind === "driving") {
-    text = `前の地点から：${kindLabel(kind)} ${fmtDist(res.distanceKm)}・約${fmtMin(res.durationMin)}`;
-  } else if (kind === "horse" || kind === "camel") {
-    text = `前の地点から：${kindLabel(kind)}で約${fmtMin(res.durationMin)}`;
-  } else if (kind === "flight") {
-    text = `前の地点から：空路 約${fmtDist(res.distanceKm)}`;
-  } else if (kind === "rail") {
-    text = res.distanceKm >= 0.05
-      ? `前の地点から：鉄道 直線約${fmtDist(res.distanceKm)}（所要時間は下の時刻を参照）`
-      : `前の地点から：鉄道（所要時間は下の時刻を参照）`;
-  } else {
-    text = `前の地点から：移動なし／同じ場所`;
-  }
-  elm.textContent = text;
-  if (res.source === "estimate") elm.classList.add("est");
+  if (kind === 'none') { elm.hidden = true; return; }
+  const tx = elm.querySelector('.leg-tx');
+  if (tx) tx.textContent = legText(kind, res, moveText);
+  elm.classList.toggle('est', res.source === 'estimate');
 }
 
 function scrollToStop(i) {
   const elm = document.getElementById(`stop-${i}`);
-  if (elm) { elm.scrollIntoView({ behavior: "smooth", block: "center" }); elm.classList.add('hi'); setTimeout(() => elm.classList.remove('hi'), 1200); }
+  if (!elm) return;
+  elm.scrollIntoView({ behavior: "smooth", block: "start" });
+  elm.classList.add('hi');
+  setTimeout(() => elm.classList.remove('hi'), 1400);
 }
 
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-/* ============ 5. 全体ルート ============ */
-function renderOverview() {
-  ++renderGeneration; // 進行中のrenderDay()の非同期更新を無効化する
-  activeDayIndex = -1;
-  updateRailActive();
-  clearMap();
-  removeWxPanel();
-  document.getElementById('dayTitle').textContent = "全体ルート（2026/11/21〜12/1）";
-  document.getElementById('dayHighlight').textContent = "各日をクリックすると詳細（歩行時間・地図・活動量）を確認できます。ここでは直線で大まかな位置関係のみ示しています。";
-  document.getElementById('statStrip').innerHTML = "";
-
-  const boundsPts = [];
-  let legendHtml = "";
-  TRIP.forEach((day, di) => {
-    const color = DAY_COLORS[di % DAY_COLORS.length];
-    const pts = day.stops.map(s => [s.lat, s.lon]);
-    if (pts.length > 1) {
-      addLine(pts, { color, weight: 3, opacity: .85, dashArray: null });
-    }
-    pts.forEach(p => boundsPts.push(p));
-    if (pts.length) {
-      const el = dayChipEl(di + 1, color);
-      addMarker(pts[0][0], pts[0][1], el, `<b>Day${di + 1}：${escapeHtml(day.title.replace(/^Day\d+：/, ""))}</b>`, () => renderDay(di));
-    }
-    legendHtml += `<div data-day="${di}"><span class="sw" style="background:${color}"></span>Day${di + 1}：${(day.highlight || day.title).slice(0, 20)}…</div>`;
-  });
-  if (boundsPts.length) fitBoundsLatLon(boundsPts, { padding: 30, duration: 0 });
-
-  removeOvLegend();
-  const legend = document.createElement('div');
-  legend.className = "ov-legend"; legend.id = "ovLegend";
-  legend.innerHTML = legendHtml;
-  document.getElementById('map').appendChild(legend);
-  legend.querySelectorAll('div[data-day]').forEach(elm => {
-    elm.addEventListener('click', () => renderDay(parseInt(elm.dataset.day, 10)));
-  });
-
-  document.getElementById('timeline').innerHTML = `
-    <div style="padding:16px 20px;color:var(--ink-soft);font-size:12.5px;">
-      全体ルートは移動の密度感をつかむための簡易表示です（直線でつないでいます）。
-      各日の実際の徒歩・車の経路や所要時間は、左のレールからDayを選ぶと表示されます。
-    </div>`;
+/* ============ 5. 全体（旅の概要・出発前に確認すること・日別一覧） ============ */
+function collectActionables() {
+  const out = [];
+  TRIP.forEach((d, di) => d.stops.forEach((s, si) => s.items.forEach(it => {
+    const tags = itemTags(it).filter(t => t[0] === 'alert' || t[0] === 'warn');
+    if (tags.length) out.push({ di, si, d, it, tags });
+  })));
+  return out;
 }
 
-/* ============ 6. レール ============ */
+function drawOverviewMap() {
+  clearMap();
+  if (!map || !mapReady) return;
+  TRIP.forEach((day, di) => {
+    const pts = day.stops.map(s => [s.lat, s.lon]);
+    if (pts.length > 1) addLine(pts, { color: dayColor(di), weight: 3, opacity: .85, dashArray: null });
+    if (pts.length) {
+      addMarker(pts[0][0], pts[0][1], dayChipEl(di + 1, dayColor(di)), `<b>Day${di + 1}：${escapeHtml(shortTitle(di))}</b>`, () => { if (!mapFull) renderDay(di); });
+    }
+  });
+  refitCurrentMap();
+}
+
+function renderOverview(opts) {
+  opts = opts || {};
+  const myGen = ++renderGeneration; // 進行中のrenderDay()の非同期更新を無効化する
+  activeDayIndex = -1;
+  updateRailActive();
+  const first = TRIP[0], last = TRIP[TRIP.length - 1];
+  const ph = tripPhase();
+  let status = '';
+  if (ph.phase === 'before') status = `<div class="ov-status">出発まで あと<b>${ph.days}</b>日</div>`;
+  else if (ph.phase === 'during' && ph.index >= 0) status = `<div class="ov-status">今日は <b>Day${ph.index + 1}</b>（${escapeHtml(dayDateLabel(TRIP[ph.index]))}）</div><button type="button" class="btn primary" data-open-day="${ph.index}">今日の予定を見る</button>`;
+  else if (ph.phase === 'after') status = `<div class="ov-status">おかえりなさい。旅行は終了しました。</div>`;
+  document.getElementById('dayHead').innerHTML = `
+    <div class="dh-meta"><span>全体</span></div>
+    <h2>${escapeHtml(TRIP_NAME)}</h2>
+    <div class="highlight">${escapeHtml(first.date)}（${first.dow}）〜${escapeHtml(mdOf(last.date))}（${last.dow}）・${TRIP.length}日間</div>
+    ${status}`;
+  document.getElementById('nextCard').hidden = true;
+
+  // 出発前に確認すること（要予約・要手配・要確認）
+  const todos = collectActionables();
+  const prep = document.getElementById('prepBox');
+  if (todos.length) {
+    prep.hidden = false;
+    prep.open = false; // 件数だけ見せて畳んでおく（開くと地図・日別一覧が画面外に押し出されるため）
+    prep.innerHTML = `<summary>📝 確認・手配が必要な予定 ${todos.length}件</summary>` + todos.map(x => `
+      <div class="prep-row" data-open-day="${x.di}" data-stop-index="${x.si}">
+        <span class="pr-date">${escapeHtml(mdOf(x.d.date))}（${x.d.dow}）<br>${escapeHtml(x.it.start || '')}</span>
+        <span class="pr-main">${escapeHtml(x.it.act)}<div class="tags">${x.tags.map(t => `<span class="tag ${t[0]}">${escapeHtml(t[1])}</span>`).join('')}</div></span>
+      </div>`).join('');
+  } else {
+    prep.hidden = true;
+  }
+
+  // 日別カード（地図の凡例も兼ねる）
+  const ti = todayIndex();
+  document.getElementById('timeline').innerHTML = TRIP.map((d, di) => `
+    <div class="daycard${di === ti ? ' today' : ''}" data-open-day="${di}">
+      <span class="dc-bar" style="background:${dayColor(di)}"></span>
+      <div class="dc-main">
+        <div class="dc-date">Day${di + 1}・${escapeHtml(dayDateLabel(d))}${di === ti ? '<span class="dc-today">今日</span>' : ''}</div>
+        <div class="dc-title">${escapeHtml(shortTitle(di))}</div>
+        <div class="dc-hl">${escapeHtml(shortHighlight(di))}</div>
+      </div>
+      <div class="dc-wx" id="dcwx-${di}"></div>
+      <span class="dc-arrow" aria-hidden="true">›</span>
+    </div>`).join('');
+
+  document.querySelectorAll('#screenTrip [data-open-day]').forEach(elm => {
+    elm.addEventListener('click', () => {
+      const di = Number(elm.dataset.openDay);
+      renderDay(di);
+      if (elm.dataset.stopIndex != null) setTimeout(() => scrollToStop(Number(elm.dataset.stopIndex)), 80);
+    });
+  });
+
+  document.getElementById('mapWrap').classList.add('ov');
+  const boundsPts = [];
+  TRIP.forEach(d => d.stops.forEach(s => boundsPts.push([s.lat, s.lon])));
+  currentView = { type: 'ov', boundsPts };
+  if (map && mapReady) { map.resize(); drawOverviewMap(); }
+  if (!opts.keepScroll) window.scrollTo(0, 0);
+
+  // 予報が出ている日だけ、カードに天気を添える
+  TRIP.forEach(async (d, di) => {
+    const diff = Math.round((parseDayDate(d.date) - toDateOnly(new Date())) / 86400000);
+    if (diff < 0 || diff > WX_FORECAST_MAX_DAYS || !d.weather) return;
+    const wx = await fetchWeather(d);
+    if (myGen !== renderGeneration || wx.status !== 'ok') return;
+    const cell = document.getElementById(`dcwx-${di}`);
+    if (cell) cell.innerHTML = `${wxIconHtml(wx.code)}${Math.round(wx.tmax)}°/${Math.round(wx.tmin)}°`;
+  });
+}
+
+/* ============ 6. 日付タブ ============ */
 function buildRail() {
   const rail = document.getElementById('rail');
-  rail.innerHTML = ""; // 起動時と地図load完了時の二重呼び出しでボタンが重複しないようにする
+  rail.innerHTML = "";
+  const ti = todayIndex();
   const ov = document.createElement('button');
-  ov.className = "r-overview"; ov.textContent = "全体ルート";
-  ov.addEventListener('click', renderOverview);
+  ov.type = 'button';
+  ov.className = "daytab ov";
+  ov.innerHTML = `<span class="dt-main">全体</span><span class="dt-sub">一覧</span>`;
+  ov.addEventListener('click', () => renderOverview());
   rail.appendChild(ov);
   TRIP.forEach((day, i) => {
     const b = document.createElement('button');
-    const md = day.date.split('/').slice(1).join('/'); // "2026/9/19" -> "9/19"
-    b.innerHTML = `<div class="r-num">${i + 1}</div><div class="r-sub">${md} ${day.dow}</div>`;
+    b.type = 'button';
+    b.className = 'daytab' + (i === ti ? ' today' : '');
+    b.innerHTML = `<span class="dt-main">${escapeHtml(mdOf(day.date))}</span><span class="dt-sub">${i === ti ? '今日' : 'Day' + (i + 1)}・${escapeHtml(day.dow)}</span>`;
     b.addEventListener('click', () => renderDay(i));
     rail.appendChild(b);
   });
@@ -1127,16 +1438,24 @@ function buildRail() {
 function updateRailActive() {
   const rail = document.getElementById('rail');
   const buttons = rail.querySelectorAll('button');
+  let activeBtn = null;
   buttons.forEach((b, idx) => {
-    if (idx === 0) b.classList.toggle('active', activeDayIndex === -1);
-    else b.classList.toggle('active', activeDayIndex === idx - 1);
+    const on = idx === 0 ? activeDayIndex === -1 : activeDayIndex === idx - 1;
+    b.classList.toggle('active', on);
+    if (on) activeBtn = b;
   });
+  // 選んだ日のタブが見えるよう横スクロールする（ページ自体は動かさない）
+  if (activeBtn) rail.scrollTo({ left: activeBtn.offsetLeft - rail.clientWidth / 2 + activeBtn.offsetWidth / 2, behavior: 'smooth' });
+}
+function updateStickyH() {
+  const h = document.getElementById('stickyHead').offsetHeight;
+  document.documentElement.style.setProperty('--stickyh', h + 'px');
 }
 
 /* ============ 7. 画面切り替え（旅程／ガイド／旅の道具） ============ */
-function renderCurrentTripView() {
-  if (activeDayIndex >= 0) renderDay(activeDayIndex);
-  else renderOverview();
+function renderCurrentTripView(opts) {
+  if (activeDayIndex >= 0) renderDay(activeDayIndex, opts);
+  else renderOverview(opts);
 }
 
 function setBottomNavActive(screen) {
@@ -1151,17 +1470,21 @@ function setBottomNavActive(screen) {
 
 function switchScreen(screen, opts) {
   opts = opts || {};
+  const changed = STATE.screen !== screen;
   STATE.screen = screen;
+  document.body.dataset.screen = screen;
   ['screenTrip', 'screenGuide', 'screenTools'].forEach(id => {
     document.getElementById(id).classList.remove('screen-active');
   });
   const idMap = { trip: 'screenTrip', guide: 'screenGuide', tools: 'screenTools' };
   document.getElementById(idMap[screen]).classList.add('screen-active');
   setBottomNavActive(screen);
+  updateStickyH();
+  if (changed) window.scrollTo(0, 0);
   PERSIST.lastScreen = screen;
   savePersisted();
   if (screen === 'trip') {
-    if (map) setTimeout(() => map.resize(), 30); // 非表示だった地図を再表示時に正しいサイズへ
+    if (map) setTimeout(() => { map.resize(); refitCurrentMap(); }, 30); // 非表示だった地図を再表示時に正しいサイズへ
     if (!opts.skipRerender) renderCurrentTripView();
   } else if (screen === 'guide' && !opts.skipRerender) {
     renderGuideHome();
@@ -1335,6 +1658,8 @@ document.getElementById('guideSearchClear').addEventListener('click', () => {
   STATE.query = '';
   location.hash = '#tools';
 });
+// 会話フレーズの記事がある旅行だけボタンを出す
+document.getElementById('headerPhraseLink').hidden = !ARTICLE_BY_ID.has('tools-phrases');
 document.getElementById('headerPhraseLink').addEventListener('click', () => {
   // 会話フレーズは日付・旅程に依存しない共通情報。どの画面からでもヘッダから直接開けるようにする。
   STATE.articleReturn = { screen: STATE.screen === 'article' ? (STATE.articleReturn ? STATE.articleReturn.screen : 'trip') : STATE.screen };
@@ -1576,17 +1901,69 @@ function renderToolsScreen() {
     </div>`;
   }
 
+  html += aboutHtml();
   body.innerHTML = html;
   bindArticleRows(body);
   if (hasGuide) renderSaveOfflineArea();
+  refreshOfflineStatus();
   const link = document.getElementById('toolsGuideLink');
   if (link) link.addEventListener('click', () => { location.hash = '#guide/chapter/tools'; });
 }
 
-/* ============ 11. オフライン保存（Service Worker連携） ============ */
+// 開発者向けの説明（データ元・計算方法・座標精度）は旅程画面から外し、ここにまとめる
+function aboutHtml() {
+  const first = TRIP[0], last = TRIP[TRIP.length - 1];
+  return `<div class="tools-section about">
+    <h3>このアプリについて</h3>
+    <dl>
+      <dt>旅行</dt><dd>${escapeHtml(TRIP_NAME)}（${escapeHtml(first.date)}〜${escapeHtml(mdOf(last.date))}）</dd>
+      <dt>データ元</dt><dd>${escapeHtml(DATA_SOURCE)}</dd>
+      <dt>オフライン</dt><dd id="offlineStatus">確認中…</dd>
+    </dl>
+    <p class="about-note">
+      距離・所要時間はページを開いた時点でオンライン経路計算（OSRM）により求めた目安です。徒歩は時速4.5kmで換算し、鉄道・空路と通信できないときは直線距離からの概算です。鉄道の所要時間は各予定の時刻をご覧ください。<br>
+      天気はOpen-Meteoの予報（約15日先まで）です。<br>
+      地図のピン：<b>実線の丸</b>＝施設まで特定／<b>点線の丸</b>＝周辺の代表点（推定）／<b>赤い点線</b>＝場所が未定。<br>
+      「マップ ↗」はGoogleマップで地点名を検索します。個人宅などはボタンを出していません。
+    </p>
+  </div>`;
+}
+
+/* ============ 11. オフライン（Service Worker連携） ============ */
+// 旅程そのものは自動で端末に保存する（sw.jsを起動時に登録）。ガイドの画像は「旅行用に保存する」でまとめて保存する。
 const SW_SCOPE_OK = ('serviceWorker' in navigator);
-// sw.js の CACHE_PREFIX（templates/guidebook/sw_template.js）と同じ値にする
-const GUIDE_CACHE_PREFIX = 'taiwan-okinawa-guide-202611-';
+// sw.js の CACHE_PREFIX（templates/sw_template.js）と同じ値にする
+const GUIDE_CACHE_PREFIX = 'tabi-shiori-taiwan-okinawa-';
+function registerServiceWorker() {
+  if (!SW_SCOPE_OK) return;
+  const secure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (!secure) return;
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(e => console.warn('Service Workerを登録できませんでした', e));
+}
+async function refreshOfflineStatus() {
+  const el = document.getElementById('offlineStatus');
+  if (!el) return;
+  if (!SW_SCOPE_OK || typeof caches === 'undefined') { el.textContent = 'この端末・ブラウザでは利用できません'; return; }
+  try {
+    const keys = (await caches.keys()).filter(k => k.startsWith(GUIDE_CACHE_PREFIX));
+    let saved = false;
+    for (const k of keys) {
+      const c = await caches.open(k);
+      if (await c.match('./index.html') || await c.match('./')) { saved = true; break; }
+    }
+    el.textContent = saved
+      ? '旅程は端末に保存済みです。電波がなくても旅程を表示できます（地図・天気・経路は除く）。'
+      : 'まだ保存されていません。電波のある場所で一度開くと自動で保存されます。';
+  } catch (e) {
+    el.textContent = '保存状態を確認できませんでした';
+  }
+}
+function updateOnlineBanner() {
+  document.getElementById('offlineBanner').hidden = navigator.onLine !== false;
+  updateStickyH();
+}
+window.addEventListener('online', updateOnlineBanner);
+window.addEventListener('offline', updateOnlineBanner);
 function renderSaveOfflineArea() {
   const el = document.getElementById('saveOfflineArea');
   if (!SW_SCOPE_OK) {
@@ -1678,14 +2055,22 @@ function parseHash() {
   return { screen: 'trip' };
 }
 
+let lastRouteWasArticle = false;
 function handleRoute() {
   const r = parseHash();
   if (r.screen === 'article') {
+    lastRouteWasArticle = true;
     switchScreen(STATE.articleReturn ? STATE.articleReturn.screen : (STATE.screen === 'trip' ? 'trip' : 'guide'), { skipRerender: true });
     openArticleView(r.articleId);
     return;
   }
+  const backFromArticle = lastRouteWasArticle;
+  lastRouteWasArticle = false;
   closeArticleView();
+  if (backFromArticle && r.screen === 'trip' && !r.date && STATE.screen === 'trip') {
+    // 記事から旅程に戻ったときは、描き直さずに元の位置のまま見せる
+    return;
+  }
   if (r.screen === 'guide') {
     switchScreen('guide', { skipRerender: true });
     if (r.chapterId) renderChapterArticles(r.chapterId);
@@ -1713,15 +2098,32 @@ window.addEventListener('hashchange', handleRoute);
 
 /* ============ 13. 起動 ============ */
 function boot() {
+  document.getElementById('tripName').textContent = TRIP_NAME;
   buildRail();
   initGuideExtras();
+  updateOnlineBanner();
+  // 旅行中は開いた瞬間に「今日」を出す。旅行前後は全体（出発までの日数・確認事項）を出す
+  const ti = todayIndex();
+  if (ti >= 0) activeDayIndex = ti;
   const restoredScreen = PERSIST.lastScreen;
-  if (!location.hash && restoredScreen && restoredScreen !== 'trip') {
-    // 記事URL等の明示的な指定がない再訪時は、最後に見ていた画面を復元する（壊れた値は無視）
+  if (!location.hash && ti < 0 && restoredScreen && restoredScreen !== 'trip') {
+    // 旅行期間外の再訪時は、最後に見ていた画面を復元する（壊れた値は無視）
     if (['guide', 'tools'].includes(restoredScreen)) location.hash = '#' + restoredScreen;
   }
   handleRoute();
+  updateStickyH();
   initMapWhenAvailable();
+  window.addEventListener('resize', updateStickyH);
+  window.addEventListener('load', registerServiceWorker);
+  // 「いま」「次」と終わった予定の表示を1分ごと、およびアプリに戻ったときに更新する
+  const tick = () => {
+    if (STATE.screen !== 'trip' || activeDayIndex < 0) return;
+    if (TRIP[activeDayIndex].date !== todayStr()) return;
+    renderNextCard(activeDayIndex);
+    applyPastState(activeDayIndex);
+  };
+  setInterval(tick, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 }
 function initGuideExtras() {
   document.getElementById('guideToc').style.display = window.innerWidth >= 880 ? 'block' : 'none';
