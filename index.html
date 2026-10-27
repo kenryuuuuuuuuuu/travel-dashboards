@@ -163,8 +163,8 @@ body:not([data-screen="trip"]) .daytabs{ display:none; }
 /* ---- 時刻表（予定を一本の路線に見立てる） ---- */
 .timeline{ padding:16px 0 8px; }
 .tt{ list-style:none; margin:0; padding:0 calc(16px + var(--sr)) 0 calc(6px + var(--sl)); }
-.tt > li{ display:grid; grid-template-columns:62px 22px minmax(0,1fr); position:relative; }
-.tt > li::before{ content:""; position:absolute; left:72px; top:0; bottom:0; width:3px; background:var(--route); }
+.tt > li{ display:grid; grid-template-columns:62px 28px minmax(0,1fr); position:relative; }
+.tt > li::before{ content:""; position:absolute; left:74.5px; top:0; bottom:0; width:3px; background:var(--route); }
 .tt > li:first-child::before{ top:14px; }
 .tt > li:last-child::before{ bottom:auto; height:14px; }
 .tt > li.past::before{ background:var(--done); }
@@ -174,13 +174,15 @@ body:not([data-screen="trip"]) .daytabs{ display:none; }
 /* 地点（駅） */
 .station{ padding-top:2px; scroll-margin-top:calc(var(--stickyh) + 8px); transition:background .3s; }
 .station.hi{ background:var(--hi-bg); }
-.station .mark::after{ content:""; position:absolute; left:2px; top:5px; width:16px; height:16px; border-radius:50%; background:var(--paper); border:3px solid var(--route); box-sizing:border-box; }
-.station.prec-推定 .mark::after{ border-style:dashed; border-width:2.5px; }
-.station.prec-未定 .mark::after{ border:2.5px dashed var(--alert); }
-.station.past .mark::after{ background:var(--done); border-color:var(--done); border-style:solid; }
-.station.cur .mark::after{ background:var(--amber); border-color:var(--amber); box-shadow:0 0 0 4px rgba(232,163,23,.25); }
+/* 地点の番号（地図のピンと同じ番号。駅ナンバリングのように路線の上に置く） */
+.station .num{ position:absolute; left:2px; top:0; width:24px; height:24px; border-radius:50%; background:#fff; border:2.5px solid var(--route); box-sizing:border-box;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; line-height:1; color:var(--ink); }
+.station.prec-推定 .num{ border-style:dashed; }
+.station.prec-未定 .num{ border:2.5px dashed var(--alert); color:var(--alert); }
+.station.past .num{ background:var(--done); border:2.5px solid var(--done); color:#fff; }
+.station.cur .num{ background:var(--amber); border:2.5px solid var(--amber); color:var(--ink); box-shadow:0 0 0 4px rgba(232,163,23,.25); }
 .station .body{ display:flex; align-items:flex-start; gap:8px; padding-bottom:6px; }
-.sname{ all:unset; box-sizing:border-box; cursor:pointer; flex:1; min-width:0; min-height:30px; font-weight:700; font-size:16.5px; line-height:1.35; }
+.sname{ all:unset; box-sizing:border-box; cursor:pointer; flex:1; min-width:0; min-height:30px; font-weight:700; font-size:16.5px; line-height:1.45; }
 .station.past .sname{ color:#8C979F; }
 .navbtn{ all:unset; box-sizing:border-box; flex:0 0 auto; cursor:pointer; display:inline-flex; align-items:center; gap:4px; min-height:32px; padding:0 9px;
   border:1px solid var(--rule); border-radius:4px; background:#fff; font-size:12.5px; font-weight:700; color:var(--route); white-space:nowrap; }
@@ -191,7 +193,7 @@ body:not([data-screen="trip"]) .daytabs{ display:none; }
 .item .tcol{ line-height:1.15; padding-top:2px; }
 .item .tcol .n{ display:block; font-size:21px; font-weight:600; }
 .item .tcol .end{ display:block; font-size:12.5px; color:var(--ink2); }
-.item .mark::after{ content:""; position:absolute; left:6.5px; top:9px; width:8px; height:8px; border-radius:50%; background:#fff; border:2px solid var(--route); }
+.item .mark::after{ content:""; position:absolute; left:8px; top:9px; width:8px; height:8px; border-radius:50%; background:#fff; border:2px solid var(--route); }
 .item.t-meal .mark::after{ border-color:#3E8E54; } .item.t-flight .mark::after{ border-color:#7A5BB0; }
 .item.t-field .mark::after{ border-color:var(--amber); } .item.t-todo .mark::after{ border-color:var(--alert); }
 .item .act{ font-size:15.5px; line-height:1.45; }
@@ -1494,9 +1496,9 @@ function renderTimeline(day, stops, dayIndex) {
     const nav = navUrl(s);
     html += `
       <li class="station prec-${escapeHtml(s.precision)}" id="stop-${i}">
-        <span class="tcol"></span><span class="mark" aria-hidden="true"></span>
+        <span class="tcol"></span><span class="mark" aria-hidden="true"><span class="num n">${i + 1}</span></span>
         <div class="body">
-          <button type="button" class="sname" data-stop="${i}" aria-label="${escapeHtml(s.name)}を地図で見る">${escapeHtml(s.name)}</button>
+          <button type="button" class="sname" data-stop="${i}" aria-label="${i + 1}番 ${escapeHtml(s.name)}を地図で見る">${escapeHtml(s.name)}</button>
           ${nav ? `<a class="navbtn" href="${escapeHtml(nav)}" target="_blank" rel="noopener">${svgIcon('open')}地図</a>` : ''}
         </div>
       </li>`;
