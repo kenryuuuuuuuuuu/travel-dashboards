@@ -261,7 +261,11 @@ body:not([data-screen="trip"]) .daytabs{ display:none; }
 /* 小さな全体地図では都市名の札が重なるので点で示し、全画面とPCでだけ名前を出す */
 .mapwrap:not(.full) .pin.day{ font-size:0; min-width:0; width:12px; height:12px; padding:0; border-radius:50%; background:var(--route); border:2px solid #fff; }
 @media (min-width: 880px){ .mapwrap:not(.full) .pin.day{ font-size:12px; min-width:28px; width:auto; height:26px; padding:0 5px; border-radius:4px; background:var(--ink); border:0; } }
-.route-label{ display:flex; align-items:center; gap:4px; background:#fff; border:1px solid var(--rule); padding:1px 6px; font-size:11px; color:var(--route); border-radius:3px; white-space:nowrap; }
+.route-label{ display:flex; align-items:center; gap:3px; background:#fff; border:1px solid var(--rule); padding:1px 5px; font-size:11.5px; font-weight:700; color:var(--route); border-radius:3px; white-space:nowrap; }
+/* 番号ピンは常に区間ラベルより手前に出す（ラベルは経路計算の後から追加されるため、何もしないと上に重なる） */
+.maplibregl-marker.pin{ z-index:3; }
+.maplibregl-marker.route-label{ z-index:1; }
+.route-label.decluttered{ visibility:hidden; }
 .route-label svg{ width:13px; height:13px; flex-basis:13px; }
 
 .wx-icon-clear,.wx-icon-mclear{ color:var(--gold); }
@@ -907,6 +911,8 @@ function initMapWhenAvailable() {
       // 画面全体は描き直さず、地図の部分だけを描く（読み込み中にスクロールした位置を戻さないため）
       drawCurrentMap();
     });
+    map.on('moveend', scheduleDeclutter);
+    map.on('resize', scheduleDeclutter);
     map.on('error', (e) => { console.warn('map error', e && e.error); });
     const timeoutId = setTimeout(() => { if (!mapReady) showMapUnavailable(); }, 9000);
     map.on('load', () => clearTimeout(timeoutId));
@@ -1169,6 +1175,28 @@ function resolveLegRoute(leg) {
   return Promise.resolve({ distanceKm: 0, durationMin: 0, coords, source: "none" });
 }
 
+// 線の長さに対して割合 f の位置（点の数で半分にすると、2点だけの直線では終点＝到着地のピンの上になってしまう）
+function pointAlong(coords, f) {
+  if (coords.length < 2) return coords[0];
+  let total = 0;
+  const seg = [];
+  for (let k = 1; k < coords.length; k++) { const d = Math.hypot(coords[k][0] - coords[k - 1][0], coords[k][1] - coords[k - 1][1]); seg.push(d); total += d; }
+  let acc = 0;
+  const goal = total * f;
+  for (let k = 0; k < seg.length; k++) {
+    if (acc + seg[k] >= goal) {
+      const t = seg[k] ? (goal - acc) / seg[k] : 0;
+      const [a, b] = [coords[k], coords[k + 1]];
+      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    }
+    acc += seg[k];
+  }
+  return coords[coords.length - 1];
+}
+function midpointAlong(coords) { return pointAlong(coords, 0.5); }
+// ラベルを置いてみる位置の候補（線の中央から順に、少しずつ前後へずらす）
+const LABEL_SPOTS = [0.5, 0.35, 0.65, 0.22, 0.78];
+
 // 1区間分の線とラベルを地図に描く（経路が取れる前は点線の直線）
 function drawLeg(leg) {
   if (!map || !mapReady) return;
@@ -1182,9 +1210,52 @@ function drawLeg(leg) {
   leg.lineId = addLine(leg.res.coords, style);
   if (leg.kind === "none") return;
   if (leg.kind === "rail" && leg.res.distanceKm < 0.05) return;
-  const coords = leg.res.coords;
-  const [mlat, mlon] = coords[Math.floor(coords.length / 2)];
-  leg.labelMarker = addLabelMarker(mlat, mlon, `${moveIcon(leg.kind, leg.move)}${escapeHtml(legText(leg.kind, leg.res, leg.move))}`);
+  const [mlat, mlon] = midpointAlong(leg.res.coords);
+  // 地図上のラベルは短く（アイコン＋所要時間だけ）。手段名や距離の詳細は予定リスト側に出ている
+  const short = (leg.kind === "foot" || leg.kind === "driving") ? `<span class="n">${escapeHtml(fmtMin(leg.res.durationMin))}</span>` : '';
+  leg.labelMarker = addLabelMarker(mlat, mlon, `${moveIcon(leg.kind, leg.move)}${short}`);
+  if (leg.labelMarker) leg.labelMarker.spots = LABEL_SPOTS.map(f => pointAlong(leg.res.coords, f));
+  scheduleDeclutter();
+}
+
+// 区間ラベルが番号ピンや他のラベルと重なるときは、そのラベルを隠す（拡大・移動のたびに判定し直す）
+let declutterTimer = null;
+function scheduleDeclutter() {
+  clearTimeout(declutterTimer);
+  declutterTimer = setTimeout(declutterLabels, 60);
+}
+function declutterLabels() {
+  if (!map || !mapReady) return;
+  const c = map.getContainer();
+  const W = c.clientWidth, H = c.clientHeight;
+  const pad = 3;
+  const hit = (a, b) => !(a.r < b.l || a.l > b.r || a.b < b.t || a.t > b.b);
+  // 地図の中の座標（px）で判定する
+  const pins = mapMarkers.filter(m => m.getElement().classList.contains('pin')).map(m => {
+    const p = map.project(m.getLngLat());
+    const el = m.getElement();
+    const hw = el.offsetWidth / 2 + pad, hh = el.offsetHeight / 2 + pad;
+    return { l: p.x - hw, r: p.x + hw, t: p.y - hh, b: p.y + hh };
+  });
+  const kept = [];
+  mapMarkers.filter(m => m.getElement().classList.contains('route-label')).forEach(m => {
+    const el = m.getElement();
+    el.classList.remove('decluttered');
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (!w) return; // 小さな地図では非表示（CSS）
+    const spots = m.spots || [[m.getLngLat().lat, m.getLngLat().lng]];
+    for (const [lat, lon] of spots) {
+      const p = map.project([lon, lat]);
+      const box = { l: p.x - w / 2 - pad, r: p.x + w / 2 + pad, t: p.y - h / 2 - pad, b: p.y + h / 2 + pad };
+      const inside = box.l >= 0 && box.t >= 0 && box.r <= W && box.b <= H;
+      if (inside && !pins.some(q => hit(box, q)) && !kept.some(k => hit(box, k))) {
+        m.setLngLat([lon, lat]);
+        kept.push(box);
+        return;
+      }
+    }
+    el.classList.add('decluttered');
+  });
 }
 
 function drawDayMap() {
@@ -1196,6 +1267,7 @@ function drawDayMap() {
     addMarker(s.lat, s.lon, pinEl(i + 1, s.precision), `<b>${i + 1}. ${escapeHtml(s.name)}</b>`, () => { if (!mapFull) scrollToStop(i); });
   });
   refitCurrentMap();
+  scheduleDeclutter();
 }
 // 本物の地図を使える状態か（電波があり、地図サービスを読み込めている）
 function liveMapUsable() { return !!(map && mapReady && !mapFailed && navigator.onLine !== false); }
@@ -1268,17 +1340,20 @@ function renderSketch() {
     });
     const showLabels = isWide() || mapFull;
     const drawn = [];
+    let pinsSvg = '', labelsSvg = '';
     stops.forEach((st, i) => {
       const x = r1(X(st.lon)), y = r1(Y(st.lat));
       // 同じ場所に戻ってくる地点は番号を重ねず、最初の1つだけ描く
       if (drawn.some(([dx, dy]) => Math.abs(dx - x) < 4 && Math.abs(dy - y) < 4)) return;
       drawn.push([x, y]);
-      out += `<g class="pin prec-${escapeHtml(st.precision)}" data-stop="${i}"><circle cx="${x}" cy="${y}" r="11"/><text x="${x}" y="${y}">${i + 1}</text></g>`;
+      pinsSvg += `<g class="pin prec-${escapeHtml(st.precision)}" data-stop="${i}"><circle cx="${x}" cy="${y}" r="11"/><text x="${x}" y="${y}">${i + 1}</text></g>`;
       // 右寄りの地点は名前を左側に出し、画面の端で切れないようにする
-      if (showLabels) out += x > W * 0.6
+      if (showLabels) labelsSvg += x > W * 0.6
         ? `<text class="lbl" x="${r1(x - 15)}" y="${r1(y + 4)}" text-anchor="end">${escapeHtml(st.name)}</text>`
         : `<text class="lbl" x="${r1(x + 15)}" y="${r1(y + 4)}">${escapeHtml(st.name)}</text>`;
     });
+    // 地名を先に、番号ピンを後に描いて、番号が隠れないようにする
+    out += labelsSvg + pinsSvg;
   } else {
     TRIP.forEach((day, di) => {
       const p = day.stops;

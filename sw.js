@@ -6,7 +6,7 @@
    - このサイトの旧キャッシュ（tabi-shiori-*、旧形式の mongolia-guide-*）だけを片付け、他のサイトのキャッシュには触れない。 */
 const CACHE_PREFIX = "tabi-shiori-taiwan-okinawa-";
 const CACHE_NAME = `${CACHE_PREFIX}v1`;
-const BUILD_ID = "2026-10-27T20:44";
+const BUILD_ID = "2026-10-27T21:08";
 const CORE_ASSETS = ["./", "./index.html"];
 const IMAGE_ASSETS = [];
 const NETWORK_TIMEOUT_MS = 4000;
